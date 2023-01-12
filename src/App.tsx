@@ -7,7 +7,6 @@ import {NotificationsProvider} from "@mantine/notifications";
 
 function App() {
     const [colorScheme, setColorScheme] = useState<ColorScheme>(localStorage.getItem('theme') === 'dark' ? 'dark' : 'light');
-
     const toggleColorScheme = (value?: ColorScheme) =>
         setColorScheme(value || (colorScheme === 'dark' ?
                 (() => {

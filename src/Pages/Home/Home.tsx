@@ -9,7 +9,7 @@ export default function Home() {
                 <Route path="home" element={<div>asd</div>}/>
                 <Route path="final-bowser" element={<FinalBowser/>}/>
             </Route>
-        )
+        ), {basename: "/pm64"}
     )
 
     return (
