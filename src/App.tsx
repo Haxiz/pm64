@@ -1,26 +1,34 @@
-import React from 'react';
+import React, {useState} from 'react';
 import logo from './logo.svg';
 import './App.css';
+import {ColorScheme, ColorSchemeProvider, MantineProvider} from "@mantine/core";
+import Home from "./Pages/Home/Home";
+import {NotificationsProvider} from "@mantine/notifications";
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    const [colorScheme, setColorScheme] = useState<ColorScheme>(localStorage.getItem('theme') === 'dark' ? 'dark' : 'light');
+
+    const toggleColorScheme = (value?: ColorScheme) =>
+        setColorScheme(value || (colorScheme === 'dark' ?
+                (() => {
+                    localStorage.setItem('theme', 'light');
+                    return 'light';
+                })
+                : (() => {
+                    localStorage.setItem('theme', 'dark');
+                    return 'dark';
+                })
+        ));
+
+    return (
+        <ColorSchemeProvider colorScheme={colorScheme} toggleColorScheme={toggleColorScheme}>
+            <MantineProvider withGlobalStyles withNormalizeCSS theme={{colorScheme}}>
+                <NotificationsProvider>
+                    <Home/>
+                </NotificationsProvider>
+            </MantineProvider>
+        </ColorSchemeProvider>
+    );
 }
 
 export default App;
