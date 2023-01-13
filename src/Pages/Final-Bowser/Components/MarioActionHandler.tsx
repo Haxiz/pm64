@@ -14,14 +14,14 @@ export default function MarioActionHandler() {
             <Text ta="center" mb={10}>Your Action this turn</Text>
             <Chip.Group position="center" multiple={false} value={fightData.Mario.action}
                         onChange={(value) => setFightData({...fightData, Mario: {...fightData.Mario, action: value}})}>
-                <Chip value="attack" disabled={fightData.turn === 0}>Attack</Chip>
-                <Chip value="boost" disabled={fightData.turn === 0}>Boost</Chip>
-                <Chip value="beam" disabled={fightData.turn === 0}>Peach Beam</Chip>
-                <Chip value="skip" disabled={fightData.turn === 0}>Skip</Chip>
+                <Chip value="attack" disabled={fightData.turn === 0 || fightData.Bowser.hp === 0}>Attack</Chip>
+                <Chip value="boost" disabled={fightData.turn === 0 || fightData.Bowser.hp === 0}>Boost</Chip>
+                <Chip value="beam" disabled={fightData.turn === 0 || fightData.Bowser.hp === 0}>{fightData.turn >= 3 ? "Peach Beam" : "Star Beam"}</Chip>
+                <Chip value="skip" disabled={fightData.turn === 0 || fightData.Bowser.hp === 0}>Skip</Chip>
             </Chip.Group>
             <Divider mt={10} mb={10} variant="dashed"
                      hidden={fightData.Mario.action === "" || fightData.Mario.action === "skip"}/>
-            <NumberInput placeholder="How much damage?" hidden={!(fightData.Mario.action === "attack")}
+            <NumberInput min={0} max={99} value={fightData.Mario.damage} placeholder="How much damage?" hidden={!(fightData.Mario.action === "attack")}
                          onChange={(value) => value ? setFightData({
                              ...fightData,
                              Mario: {...fightData.Mario, damage: value}

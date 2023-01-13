@@ -88,7 +88,7 @@ export default function MarioFPHandler() {
                     <Image src={FP} height={29} width={44}/>
                     {getNumberIcon(fightData.Mario.maxFP, "red")}
                 </Group>
-                <Group>
+                <Group hidden={!(fightData.turn === 0)}>
                     <Space/>
                     <Image className={classes.hover} src={minus} height={22} width={22} onClick={() => {
                         handleMaxFP("remove", 5)

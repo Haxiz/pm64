@@ -17,30 +17,34 @@ export default function BasicStats() {
     const {fightData, setFightData} = useContext(FightContext);
 
     function handleBootCycle() {
-        switch (fightData.Mario.boots) {
-            case "Boots":
-                setFightData({...fightData, Mario: {...fightData.Mario, boots: "Super Boots"}});
-                break;
-            case "Super Boots":
-                setFightData({...fightData, Mario: {...fightData.Mario, boots: "Ultra Boots"}});
-                break;
-            case "Ultra Boots":
-                setFightData({...fightData, Mario: {...fightData.Mario, boots: "Boots"}});
-                break;
+        if (fightData.turn === 0) {
+            switch (fightData.Mario.boots) {
+                case "Boots":
+                    setFightData({...fightData, Mario: {...fightData.Mario, boots: "Super Boots"}});
+                    break;
+                case "Super Boots":
+                    setFightData({...fightData, Mario: {...fightData.Mario, boots: "Ultra Boots"}});
+                    break;
+                case "Ultra Boots":
+                    setFightData({...fightData, Mario: {...fightData.Mario, boots: "Boots"}});
+                    break;
+            }
         }
     }
 
     function handleHammerCycle() {
-        switch (fightData.Mario.hammer) {
-            case "Hammer":
-                setFightData({...fightData, Mario: {...fightData.Mario, hammer: "Super Hammer"}});
-                break;
-            case "Super Hammer":
-                setFightData({...fightData, Mario: {...fightData.Mario, hammer: "Ultra Hammer"}});
-                break;
-            case "Ultra Hammer":
-                setFightData({...fightData, Mario: {...fightData.Mario, hammer: "Hammer"}});
-                break;
+        if (fightData.turn === 0) {
+            switch (fightData.Mario.hammer) {
+                case "Hammer":
+                    setFightData({...fightData, Mario: {...fightData.Mario, hammer: "Super Hammer"}});
+                    break;
+                case "Super Hammer":
+                    setFightData({...fightData, Mario: {...fightData.Mario, hammer: "Ultra Hammer"}});
+                    break;
+                case "Ultra Hammer":
+                    setFightData({...fightData, Mario: {...fightData.Mario, hammer: "Hammer"}});
+                    break;
+            }
         }
     }
 
