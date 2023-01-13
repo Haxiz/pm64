@@ -1,4 +1,4 @@
-import {Box, Center, Grid, Group, Image, Space, Stack, Text} from "@mantine/core";
+import {Box, Group, Image, Stack, Text} from "@mantine/core";
 import MarioSprite from "../../../Assets/Sprites/mario.png";
 import MarioSpriteTired from "../../../Assets/Sprites/mario-tired.png";
 import MarioSpriteDead from "../../../Assets/Sprites/mario-dead.png";
@@ -47,8 +47,8 @@ export default function BasicStats() {
     return (
         <Box className={classes.box}>
             <Stack>
-                <Text fz="xl">Basic Stats</Text>
-                <Group>
+                <Text fz="xl" ta="center" >Basic Stats</Text>
+                <Group position="center">
                     <Image src={MarioSprite} height={102} width={58} hidden={!(Mario.hp > 5)}/>
                     <Image src={MarioSpriteTired} height={102} width={70} hidden={!(Mario.hp <= 5 && Mario.hp > 0)}/>
                     <Image src={MarioSpriteDead} height={102} width={84} hidden={!(Mario.hp === 0)}/>
@@ -57,7 +57,7 @@ export default function BasicStats() {
                     {getBootIcon(Mario.boots, handleBootCycle)}
                     {getHammerIcon(Mario.hammer, handleHammerCycle)}
                 </Group>
-                <Group>
+                <Group position="center">
                     <MarioHPHandler/>
                     <MarioFPHandler/>
                 </Group>

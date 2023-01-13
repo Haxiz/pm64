@@ -1,4 +1,4 @@
-import {AppShell, Burger, Header, MediaQuery, useMantineTheme} from "@mantine/core";
+import {AppShell, useMantineTheme} from "@mantine/core";
 import {useState} from "react";
 import MantineNavbar from "./MantineNavbar";
 import MantineHeader from "./MantineHeader";
