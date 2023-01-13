@@ -8,53 +8,25 @@ import MarioI from "../../Types/mario.type";
 import BowserI from "../../Types/bowser.types";
 import BasicStats from "./Components/BasicStats";
 import BowserStats from "./Components/BowserStats";
+import PartnerI from "../../Types/partner.types";
+
+interface FightDataI {
+    Mario: MarioI,
+    Partner: PartnerI,
+    Bowser: BowserI,
+    turn: number,
+}
 
 interface FightContextI {
-    Mario: MarioI,
-    setMario: React.Dispatch<React.SetStateAction<MarioI>>,
-    Bowser: BowserI,
-    setBowser: React.Dispatch<React.SetStateAction<BowserI>>
-    turn: number,
-    setTurn: React.Dispatch<React.SetStateAction<number>>
+    fightData: FightDataI,
+    setFightData: React.Dispatch<React.SetStateAction<FightDataI>>,
 }
 
 export const FightContext = React.createContext<FightContextI>({} as FightContextI);
 
 export default function FinalBowser() {
-    const [turn, setTurn] = useState(0);
-    const [Mario, setMario] = useState<MarioI>({
-        maxHP: 10,
-        hp: 10,
-        maxFP: 10,
-        fp: 10,
-        hammer: "Hammer",
-        boots: "Boots",
-        badges: [],
-        items: [],
-        buffed: false,
-    });
-    const [Bowser, setBowser] = useState<BowserI>({
-        maxHP: 99,
-        hp: 99,
-        heals: 0,
-        shield: false,
-        turnsSinceHeal: 0,
-        turnsSinceShockwave: 0,
-        turnsSinceStarRod: 0,
-        buffed: false,
-    });
-
-    const fightContext: FightContextI = {
-        Mario: Mario,
-        setMario: setMario,
-        Bowser: Bowser,
-        setBowser: setBowser,
-        turn: turn,
-        setTurn: setTurn
-    }
-
-    function resetData() {
-        setMario({
+    const [fightData, setFightData] = useState<FightDataI>({
+        Mario: {
             maxHP: 10,
             hp: 10,
             maxFP: 10,
@@ -64,18 +36,92 @@ export default function FinalBowser() {
             badges: [],
             items: [],
             buffed: false,
-        });
-        setBowser({
+            action: "",
+            damage: 0,
+        },
+        Partner: {
+            action: "",
+            damage: 0,
+        },
+        Bowser: {
             maxHP: 99,
             hp: 99,
             heals: 0,
             shield: false,
-            turnsSinceHeal: 0,
-            turnsSinceShockwave: 0,
-            turnsSinceStarRod: 0,
-            buffed: false,
+            turnsInfo: {
+                turnsSinceShield: 0,
+                turnsSinceFire: 0,
+                turnsSinceClaw: 0,
+                turnsSinceHeal: 0,
+                turnsSinceStomp: 0,
+                turnsSinceThunder: 0,
+                turnsSinceShockwave: 0,
+            },
+            action: "",
+            actionChances: {
+                shield: 0,
+                fire: 0,
+                claw: 0,
+                heal: 0,
+                buttstomp: 0,
+                thunder: 0,
+                shockwave: 0,
+            }
+        },
+        turn: 0,
+    })
+
+    function resetData() {
+        setFightData({
+            Mario: {
+                maxHP: 10,
+                hp: 10,
+                maxFP: 10,
+                fp: 10,
+                hammer: "Hammer",
+                boots: "Boots",
+                badges: [],
+                items: [],
+                buffed: false,
+                action: "",
+                damage: 0,
+            },
+            Partner: {
+                action: "",
+                damage: 0,
+            },
+            Bowser: {
+                maxHP: 99,
+                hp: 99,
+                heals: 0,
+                shield: false,
+                turnsInfo: {
+                    turnsSinceShield: 0,
+                    turnsSinceFire: 0,
+                    turnsSinceClaw: 0,
+                    turnsSinceHeal: 0,
+                    turnsSinceStomp: 0,
+                    turnsSinceThunder: 0,
+                    turnsSinceShockwave: 0,
+                },
+                action: "",
+                actionChances: {
+                    shield: 0,
+                    fire: 0,
+                    claw: 0,
+                    heal: 0,
+                    buttstomp: 0,
+                    thunder: 0,
+                    shockwave: 0,
+                }
+            },
+            turn: 0,
         });
-        setTurn(0);
+    }
+
+    const fightContext = {
+        fightData,
+        setFightData,
     }
 
     return (
@@ -85,7 +131,7 @@ export default function FinalBowser() {
                     {/* Basic Stats */}
                     <Grid.Col xs={1} sm={3} md={3} lg={3}>
                         <Text fz="xl" fw={700} mb={15}>
-                            {turn === 0 ? "Basic setup - Pre-fight" : "Turn " + turn}
+                            {fightData.turn === 0 ? "Basic setup - Pre-fight" : "Turn " + fightData.turn}
                         </Text>
                         <BasicStats/>
                     </Grid.Col>

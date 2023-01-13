@@ -7,35 +7,42 @@ import React, {useContext} from "react";
 import pageStyles from "../../../Styles/page.styles";
 import {FightContext} from "../FinalBowser";
 import errorNotification from "../../../Services/Utils/Notifications/error.util";
-import danger from "../../../Assets/Icons/danger.png";
-import peril from "../../../Assets/Icons/peril.png";
 
 export default function MarioHPHandler() {
     const {classes} = pageStyles();
-    const {Mario, setMario} = useContext(FightContext);
+    const {fightData, setFightData} = useContext(FightContext);
 
     function handleMaxHP(action: string, amount: number) {
         switch (action) {
             case "add":
-                if (Mario.maxHP < 94) {
-                    setMario({...Mario, maxHP: Mario.maxHP + amount});
-                } else if (Mario.maxHP >= 95 && Mario.maxHP < 99) {
-                    setMario({...Mario, maxHP: 99});
+                if (fightData.Mario.maxHP < 94) {
+                    setFightData({...fightData, Mario: {...fightData.Mario, maxHP: fightData.Mario.maxHP + amount}});
+                } else if (fightData.Mario.maxHP >= 95 && fightData.Mario.maxHP < 99) {
+                    setFightData({...fightData, Mario: {...fightData.Mario, maxHP: 99}});
                 } else {
                     errorNotification("Oh no!", "You can't increase your Max HP anymore!");
                 }
                 break;
             case "remove":
-                if (Mario.maxHP === 99) {
-                    setMario({...Mario, maxHP: 95, hp: Mario.hp > 95 ? 95 : Mario.hp});
-                } else if (Mario.maxHP > 5) {
-                    setMario({...Mario, maxHP: Mario.maxHP - amount, hp: Mario.hp > Mario.maxHP - amount ? Mario.maxHP - amount : Mario.hp});
+                if (fightData.Mario.maxHP === 99) {
+                    setFightData({
+                        ...fightData,
+                        Mario: {...fightData.Mario, maxHP: 95, hp: fightData.Mario.hp > 95 ? 95 : fightData.Mario.hp}
+                    });
+                } else if (fightData.Mario.maxHP > 5) {
+                    setFightData({
+                        ...fightData, Mario: {
+                            ...fightData.Mario,
+                            maxHP: fightData.Mario.maxHP - amount,
+                            hp: fightData.Mario.hp > fightData.Mario.maxHP - amount ? fightData.Mario.maxHP - amount : fightData.Mario.hp
+                        }
+                    })
                 } else {
                     errorNotification("Oh no!", "You can't decrease your Max HP anymore!");
                 }
                 break;
             case "update":
-                setMario({...Mario, maxHP: amount});
+                setFightData({...fightData, Mario: {...fightData.Mario, maxHP: amount}});
                 break;
             default:
                 errorNotification("Invalid action", action);
@@ -46,25 +53,25 @@ export default function MarioHPHandler() {
     function handleCurrentHP(action: string, amount: number) {
         switch (action) {
             case "add":
-                if (Mario.hp < 100) {
-                    if (Mario.hp + amount > Mario.maxHP) {
+                if (fightData.Mario.hp < 100) {
+                    if (fightData.Mario.hp + amount > fightData.Mario.maxHP) {
                         errorNotification("Oh no!", "You can't increase your HP above your Max HP!");
                     } else {
-                        setMario({...Mario, hp: Mario.hp + amount});
+                        setFightData({...fightData, Mario: {...fightData.Mario, hp: fightData.Mario.hp + amount}});
                     }
                 } else {
                     errorNotification("Oh no!", "You can't increase your HP anymore!");
                 }
                 break;
             case "remove":
-                if (Mario.hp > 0) {
-                    setMario({...Mario, hp: Mario.hp - amount});
+                if (fightData.Mario.hp > 0) {
+                    setFightData({...fightData, Mario: {...fightData.Mario, hp: fightData.Mario.hp - amount}});
                 } else {
                     errorNotification("Oh no!", "You can't decrease your HP anymore!");
                 }
                 break;
             case "update":
-                setMario({...Mario, hp: amount});
+                setFightData({...fightData, Mario: {...fightData.Mario, hp: amount}});
                 break;
             default:
                 errorNotification("Invalid action", action);
@@ -79,7 +86,7 @@ export default function MarioHPHandler() {
                 Max HP
                 <Group>
                     <Image src={HP} height={29} width={44}/>
-                    {getNumberIcon(Mario.maxHP, "red")}
+                    {getNumberIcon(fightData.Mario.maxHP, "red")}
                 </Group>
                 <Group>
                     <Space/>
@@ -97,7 +104,7 @@ export default function MarioHPHandler() {
                 Current HP
                 <Group>
                     <Image src={HP} height={29} width={44}/>
-                    {getNumberIcon(Mario.hp, "white")}
+                    {getNumberIcon(fightData.Mario.hp, "white")}
                 </Group>
                 <Group>
                     <Space/>

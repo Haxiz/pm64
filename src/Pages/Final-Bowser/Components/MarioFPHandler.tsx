@@ -10,30 +10,39 @@ import plus from "../../../Assets/Icons/+.png";
 
 export default function MarioFPHandler() {
     const {classes} = pageStyles();
-    const {Mario, setMario} = useContext(FightContext);
+    const {fightData, setFightData} = useContext(FightContext);
 
     function handleMaxFP(action: string, amount: number) {
         switch (action) {
             case "add":
-                if (Mario.maxFP < 94) {
-                    setMario({...Mario, maxFP: Mario.maxFP + amount});
-                } else if (Mario.maxFP >= 95 && Mario.maxFP < 99) {
-                    setMario({...Mario, maxFP: 99});
+                if (fightData.Mario.maxFP < 94) {
+                    setFightData({...fightData, Mario: {...fightData.Mario, maxFP: fightData.Mario.maxFP + amount}});
+                } else if (fightData.Mario.maxFP >= 95 && fightData.Mario.maxFP < 99) {
+                    setFightData({...fightData, Mario: {...fightData.Mario, maxFP: 99}});
                 } else {
                     errorNotification("Oh no!", "You can't increase your Max FP anymore!");
                 }
                 break;
             case "remove":
-                if (Mario.maxFP === 99) {
-                    setMario({...Mario, maxFP: 95, fp: Mario.fp > 95 ? 95 : Mario.fp});
-                } else if (Mario.maxFP > 5) {
-                    setMario({...Mario, maxFP: Mario.maxFP - amount, fp: Mario.fp > Mario.maxFP - amount ? Mario.maxFP - amount : Mario.fp});
+                if (fightData.Mario.maxFP === 99) {
+                    setFightData({
+                        ...fightData,
+                        Mario: {...fightData.Mario, maxFP: 95, fp: fightData.Mario.fp > 95 ? 95 : fightData.Mario.fp}
+                    });
+                } else if (fightData.Mario.maxFP > 5) {
+                    setFightData({
+                        ...fightData, Mario: {
+                            ...fightData.Mario,
+                            maxFP: fightData.Mario.maxFP - amount,
+                            fp: fightData.Mario.fp > fightData.Mario.maxFP - amount ? fightData.Mario.maxFP - amount : fightData.Mario.fp
+                        }
+                    });
                 } else {
                     errorNotification("Oh no!", "You can't decrease your Max FP anymore!");
                 }
                 break;
             case "update":
-                setMario({...Mario, maxFP: amount});
+                setFightData({...fightData, Mario: {...fightData.Mario, maxFP: amount}});
                 break;
             default:
                 errorNotification("Invalid action", action);
@@ -44,25 +53,25 @@ export default function MarioFPHandler() {
     function handleCurrentFP(action: string, amount: number) {
         switch (action) {
             case "add":
-                if (Mario.fp < 100) {
-                    if (Mario.fp + amount > Mario.maxFP) {
+                if (fightData.Mario.fp < 100) {
+                    if (fightData.Mario.fp + amount > fightData.Mario.maxFP) {
                         errorNotification("Oh no!", "You can't increase your FP above your Max FP!");
                     } else {
-                        setMario({...Mario, fp: Mario.fp + amount});
+                        setFightData({...fightData, Mario: {...fightData.Mario, fp: fightData.Mario.fp + amount}});
                     }
                 } else {
                     errorNotification("Oh no!", "You can't increase your FP anymore!");
                 }
                 break;
             case "remove":
-                if (Mario.fp > 0) {
-                    setMario({...Mario, fp: Mario.fp - amount});
+                if (fightData.Mario.fp > 0) {
+                    setFightData({...fightData, Mario: {...fightData.Mario, fp: fightData.Mario.fp - amount}});
                 } else {
                     errorNotification("Oh no!", "You can't decrease your FP anymore!");
                 }
                 break;
             case "update":
-                setMario({...Mario, fp: amount});
+                setFightData({...fightData, Mario: {...fightData.Mario, fp: amount}});
                 break;
             default:
                 errorNotification("Invalid action", action);
@@ -77,7 +86,7 @@ export default function MarioFPHandler() {
                 Max FP
                 <Group>
                     <Image src={FP} height={29} width={44}/>
-                    {getNumberIcon(Mario.maxFP, "red")}
+                    {getNumberIcon(fightData.Mario.maxFP, "red")}
                 </Group>
                 <Group>
                     <Space/>
@@ -95,7 +104,7 @@ export default function MarioFPHandler() {
                 Current FP
                 <Group>
                     <Image src={FP} height={29} width={44}/>
-                    {getNumberIcon(Mario.fp, "white")}
+                    {getNumberIcon(fightData.Mario.fp, "white")}
                 </Group>
                 <Group>
                     <Space/>

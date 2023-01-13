@@ -14,32 +14,32 @@ import peril from "../../../Assets/Icons/peril.png";
 
 export default function BasicStats() {
     const {classes} = pageStyles();
-    const {Mario, setMario} = useContext(FightContext);
+    const {fightData, setFightData} = useContext(FightContext);
 
     function handleBootCycle() {
-        switch (Mario.boots) {
+        switch (fightData.Mario.boots) {
             case "Boots":
-                setMario({...Mario, boots: "Super Boots"});
+                setFightData({...fightData, Mario: {...fightData.Mario, boots: "Super Boots"}});
                 break;
             case "Super Boots":
-                setMario({...Mario, boots: "Ultra Boots"});
+                setFightData({...fightData, Mario: {...fightData.Mario, boots: "Ultra Boots"}});
                 break;
             case "Ultra Boots":
-                setMario({...Mario, boots: "Boots"});
+                setFightData({...fightData, Mario: {...fightData.Mario, boots: "Boots"}});
                 break;
         }
     }
 
     function handleHammerCycle() {
-        switch (Mario.hammer) {
+        switch (fightData.Mario.hammer) {
             case "Hammer":
-                setMario({...Mario, hammer: "Super Hammer"});
+                setFightData({...fightData, Mario: {...fightData.Mario, hammer: "Super Hammer"}});
                 break;
             case "Super Hammer":
-                setMario({...Mario, hammer: "Ultra Hammer"});
+                setFightData({...fightData, Mario: {...fightData.Mario, hammer: "Ultra Hammer"}});
                 break;
             case "Ultra Hammer":
-                setMario({...Mario, hammer: "Hammer"});
+                setFightData({...fightData, Mario: {...fightData.Mario, hammer: "Hammer"}});
                 break;
         }
     }
@@ -49,13 +49,13 @@ export default function BasicStats() {
             <Stack>
                 <Text fz="xl" ta="center" >Basic Stats</Text>
                 <Group position="center">
-                    <Image src={MarioSprite} height={102} width={58} hidden={!(Mario.hp > 5)}/>
-                    <Image src={MarioSpriteTired} height={102} width={70} hidden={!(Mario.hp <= 5 && Mario.hp > 0)}/>
-                    <Image src={MarioSpriteDead} height={102} width={84} hidden={!(Mario.hp === 0)}/>
-                    <Image src={danger} height={20} width={60} hidden={!(Mario.hp > 1 && Mario.hp <= 5)}/>
-                    <Image src={peril} height={20} width={60} hidden={!(Mario.hp === 1)}/>
-                    {getBootIcon(Mario.boots, handleBootCycle)}
-                    {getHammerIcon(Mario.hammer, handleHammerCycle)}
+                    <Image src={MarioSprite} height={102} width={58} hidden={!(fightData.Mario.hp > 5)}/>
+                    <Image src={MarioSpriteTired} height={102} width={70} hidden={!(fightData.Mario.hp <= 5 && fightData.Mario.hp > 0)}/>
+                    <Image src={MarioSpriteDead} height={102} width={84} hidden={!(fightData.Mario.hp === 0)}/>
+                    <Image src={danger} height={20} width={60} hidden={!(fightData.Mario.hp > 1 && fightData.Mario.hp <= 5)}/>
+                    <Image src={peril} height={20} width={60} hidden={!(fightData.Mario.hp === 1)}/>
+                    {getBootIcon(fightData.Mario.boots, handleBootCycle)}
+                    {getHammerIcon(fightData.Mario.hammer, handleHammerCycle)}
                 </Group>
                 <Group position="center">
                     <MarioHPHandler/>

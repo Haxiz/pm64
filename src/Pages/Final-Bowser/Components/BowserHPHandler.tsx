@@ -10,30 +10,30 @@ import plus from "../../../Assets/Icons/+.png";
 
 export default function BowserHPHandler() {
     const {classes} = pageStyles();
-    const {Bowser, setBowser} = useContext(FightContext);
+    const {fightData, setFightData} = useContext(FightContext);
 
     function handleCurrentHP(action: string, amount: number) {
         switch (action) {
             case "add":
-                if (Bowser.hp < 100) {
-                    if (Bowser.hp + amount > Bowser.maxHP) {
+                if (fightData.Bowser.hp < 100) {
+                    if (fightData.Bowser.hp + amount > fightData.Bowser.maxHP) {
                         errorNotification("Oh no!", "You can't increase Bowser's HP above his Max HP!");
                     } else {
-                        setBowser({...Bowser, hp: Bowser.hp + amount});
+                        setFightData({...fightData, Bowser: {...fightData.Bowser, hp: fightData.Bowser.hp + amount}});
                     }
                 } else {
                     errorNotification("Oh no!", "You can't increase Bowser's HP anymore!");
                 }
                 break;
             case "remove":
-                if (Bowser.hp > 0) {
-                    setBowser({...Bowser, hp: Bowser.hp - amount});
+                if (fightData.Bowser.hp > 0) {
+                    setFightData({...fightData, Bowser: {...fightData.Bowser, hp: fightData.Bowser.hp - amount}});
                 } else {
                     errorNotification("Oh no!", "You can't decrease Bowser's HP anymore!");
                 }
                 break;
             case "update":
-                setBowser({...Bowser, hp: amount});
+                setFightData({...fightData, Bowser: {...fightData.Bowser, hp: amount}});
                 break;
             default:
                 errorNotification("Invalid action", action);
@@ -47,7 +47,7 @@ export default function BowserHPHandler() {
                 Current HP
                 <Group>
                     <Image src={HP} height={29} width={44}/>
-                    {getNumberIcon(Bowser.hp, "white")}
+                    {getNumberIcon(fightData.Bowser.hp, "white")}
                 </Group>
                 <Group>
                     <Space/>
