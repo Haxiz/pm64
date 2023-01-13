@@ -1,4 +1,4 @@
-import {Box, Group, Image, Stack, Text} from "@mantine/core";
+import {Box, Group, Image, Indicator, Stack, Text} from "@mantine/core";
 import MarioSprite from "../../../Assets/Sprites/mario.png";
 import MarioSpriteTired from "../../../Assets/Sprites/mario-tired.png";
 import MarioSpriteDead from "../../../Assets/Sprites/mario-dead.png";
@@ -11,6 +11,8 @@ import MarioHPHandler from "./MarioHPHandler";
 import MarioFPHandler from "./MarioFPHandler";
 import danger from "../../../Assets/Icons/danger.png";
 import peril from "../../../Assets/Icons/peril.png";
+import bootBoost from "../../../Assets/Icons/boot-boost.png";
+import wattBoost from "../../../Assets/Icons/watt-boost.png";
 
 export default function BasicStats() {
     const {classes} = pageStyles();
@@ -51,12 +53,28 @@ export default function BasicStats() {
     return (
         <Box className={classes.box}>
             <Stack>
-                <Text fz="xl" ta="center" >Basic Stats</Text>
+                <Text fz="xl" ta="center">Basic Stats</Text>
                 <Group position="center">
-                    <Image src={MarioSprite} height={102} width={58} hidden={!(fightData.Mario.hp > 5)}/>
-                    <Image src={MarioSpriteTired} height={102} width={70} hidden={!(fightData.Mario.hp <= 5 && fightData.Mario.hp > 0)}/>
+                    <Indicator hidden={!(fightData.Mario.hp > 5) || (!(fightData.Mario.buffed) && !(fightData.Partner.buffTurns > 0))} position="top-end"
+                               label={fightData.Partner.buffTurns === 0 ? <Image src={bootBoost} /> : <Image src={wattBoost} width={29} height={29}/>} size={40} color="green"
+                               withBorder processing>
+                        <Image src={MarioSprite} height={102} width={58}/>
+                    </Indicator>
+                    <Image src={MarioSprite} height={102} width={58}
+                           hidden={!(fightData.Mario.hp > 5) || (fightData.Mario.buffed) || !(fightData.Partner.buffTurns === 0)}/>
+
+                    <Indicator
+                        hidden={!(fightData.Mario.hp <= 5 && fightData.Mario.hp > 0) || (!(fightData.Mario.buffed) && !(fightData.Partner.buffTurns > 0))}
+                        position="top-end" label={fightData.Partner.buffTurns === 0 ? <Image src={bootBoost} /> : <Image src={wattBoost} width={29} height={29}/>} size={40} color="green"
+                        withBorder processing>
+                        <Image src={MarioSpriteTired} height={102} width={70}/>
+                    </Indicator>
+                    <Image src={MarioSpriteTired} height={102} width={70}
+                           hidden={!(fightData.Mario.hp <= 5 && fightData.Mario.hp > 0) || (fightData.Mario.buffed) || !(fightData.Partner.buffTurns === 0)}/>
+
                     <Image src={MarioSpriteDead} height={102} width={84} hidden={!(fightData.Mario.hp === 0)}/>
-                    <Image src={danger} height={20} width={60} hidden={!(fightData.Mario.hp > 1 && fightData.Mario.hp <= 5)}/>
+                    <Image src={danger} height={20} width={60}
+                           hidden={!(fightData.Mario.hp > 1 && fightData.Mario.hp <= 5)}/>
                     <Image src={peril} height={20} width={60} hidden={!(fightData.Mario.hp === 1)}/>
                     {getBootIcon(fightData.Mario.boots, handleBootCycle)}
                     {getHammerIcon(fightData.Mario.hammer, handleHammerCycle)}

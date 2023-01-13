@@ -15,6 +15,7 @@ interface FightDataI {
     Partner: PartnerI,
     Bowser: BowserI,
     turn: number,
+    first: string,
 }
 
 interface FightContextI {
@@ -42,6 +43,7 @@ export default function FinalBowser() {
         Partner: {
             action: "",
             damage: 0,
+            buffTurns: 0,
         },
         Bowser: {
             maxHP: 99,
@@ -69,6 +71,7 @@ export default function FinalBowser() {
             }
         },
         turn: 0,
+        first: "Mario",
     })
 
     function resetData() {
@@ -89,6 +92,7 @@ export default function FinalBowser() {
             Partner: {
                 action: "",
                 damage: 0,
+                buffTurns: 0,
             },
             Bowser: {
                 maxHP: 99,
@@ -116,6 +120,7 @@ export default function FinalBowser() {
                 }
             },
             turn: 0,
+            first: "Mario",
         });
     }
 
@@ -129,14 +134,14 @@ export default function FinalBowser() {
             <Container fluid>
                 <Grid>
                     {/* Basic Stats */}
-                    <Grid.Col xs={1} sm={3} md={3} lg={3}>
+                    <Grid.Col md={3} lg={3}>
                         <Text fz="xl" fw={700} mb={15}>
                             {fightData.turn === 0 ? "Basic setup - Pre-fight" : "Turn " + fightData.turn}
                         </Text>
                         <BasicStats/>
                     </Grid.Col>
                     {/* Chances */}
-                    <Grid.Col xs={1} sm={9} md={9} lg={9}>
+                    <Grid.Col md={9} lg={9}>
                         <BowserStats/>
                     </Grid.Col>
                 </Grid>

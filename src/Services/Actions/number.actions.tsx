@@ -20,10 +20,12 @@ import eightR from "../../Assets/Icons/Numbers/8-red.png";
 import nineR from "../../Assets/Icons/Numbers/9-red.png";
 import {Group, Image} from "@mantine/core";
 
-export default function getNumberIcon(value: number, color: string) {
+export default function getNumberIcon(value: number, color: string, double: boolean = true) {
     let imageValues = [];
-    if (value === 0) {
+    if (value === 0 && double) {
         imageValues.push(color === "white" ? zeroW : zeroR);
+        imageValues.push(color === "white" ? zeroW : zeroR);
+    } else if (value === 0 && !double) {
         imageValues.push(color === "white" ? zeroW : zeroR);
     }
     while (value !== 0) {
@@ -62,7 +64,7 @@ export default function getNumberIcon(value: number, color: string) {
         }
         value = Math.floor(value / 10);
     }
-    if (imageValues.length === 1) {
+    if (imageValues.length === 1 && double) {
         imageValues.unshift(color === "white" ? zeroW : zeroR);
     }
     return (

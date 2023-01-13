@@ -19,6 +19,7 @@ import PartnerActionHandler from "./PartnerActionHandler";
 import errorNotification from "../../../Services/Utils/Notifications/error.util";
 import warningNotification from "../../../Services/Utils/Notifications/warning.util";
 import successNotification from "../../../Services/Utils/Notifications/success.util";
+import star from "../../../Assets/Icons/star.png"
 
 export default function BowserStats() {
     const {classes} = pageStyles();
@@ -26,9 +27,9 @@ export default function BowserStats() {
 
     function resetFight() {
         setFightData({
-            ...fightData,
             Mario: {
                 ...fightData.Mario,
+                buffed: false,
                 action: "",
                 damage: 0,
             },
@@ -60,8 +61,10 @@ export default function BowserStats() {
             Partner: {
                 action: "",
                 damage: 0,
+                buffTurns: 0,
             },
             turn: 0,
+            first: "Mario",
         });
     }
 
@@ -106,6 +109,7 @@ export default function BowserStats() {
             let bowserHeals = fightData.Bowser.heals;
             let bowserShield = fightData.Bowser.shield;
             let marioBuffed = fightData.Mario.buffed;
+            let partnerBuffTurns = fightData.Partner.buffTurns;
 
             // Handle Mario's turn
             switch (fightData.Mario.action) {
@@ -114,6 +118,9 @@ export default function BowserStats() {
                         bowserHP = 0;
                     } else {
                         bowserHP -= fightData.Mario.damage;
+                    }
+                    if (marioBuffed) {
+                        marioBuffed = false;
                     }
                     break;
                 case "boost":
@@ -135,7 +142,11 @@ export default function BowserStats() {
                     }
                     break;
                 case "boost":
-                    marioBuffed = true;
+                    if (fightData.first === "Mario") {
+                        partnerBuffTurns = 5;
+                    } else {
+                        partnerBuffTurns = 4;
+                    }
                     break;
                 case "skip":
                     break;
@@ -179,6 +190,10 @@ export default function BowserStats() {
                     break;
             }
 
+            if (partnerBuffTurns > 0) {
+                partnerBuffTurns--;
+            }
+
             setFightData({
                 ...fightData,
                 Mario: {
@@ -199,8 +214,10 @@ export default function BowserStats() {
                     ...fightData.Partner,
                     action: "",
                     damage: 0,
+                    buffTurns: partnerBuffTurns,
                 },
                 turn: fightData.turn + 1,
+                first: "Mario",
             });
         }
     }
@@ -208,13 +225,13 @@ export default function BowserStats() {
     return (
         <Box className={classes.box}>
             <Grid gutter="xl" align="center">
-                <Grid.Col sm={1} md={3}>
+                <Grid.Col sm={3} md={3}>
                     <Stack align="center">
-                        <Indicator color="yellow" position="top-end" label="Star Shield Active!" size={25}
+                        <Indicator color="yellow" position="top-end" label={<Image src={star} />} size={25}
                                    withBorder processing hidden={!fightData.Bowser.shield} offset={20}>
                             <Image src={BowserSprite} height={230} width={228} hidden={!(fightData.Bowser.hp > 0)}/>
                         </Indicator>
-                        <Image src={BowserSprite} height={230} width={228}
+                        <Image src={BowserSprite} style={{maxWidth: 228}}
                                hidden={!(fightData.Bowser.hp > 0) || fightData.Bowser.shield}/>
                         <Image src={BowserSpriteDead} height={230} width={168}
                                hidden={!(fightData.Bowser.hp === 0)}/>
@@ -247,7 +264,7 @@ export default function BowserStats() {
                         }
                     </Stack>
                 </Grid.Col>
-                <Grid.Col sm={1} md="auto" span="auto">
+                <Grid.Col md="auto" span="auto">
                     <Group spacing="xs" position="center">
                         <Text fz="xl" mb={10} ta="center">
                             Predicted Actions {fightData.turn !== 0 ? " - Turn " + fightData.turn : ""}
@@ -257,27 +274,6 @@ export default function BowserStats() {
                     <Grid align="center">
                         <Grid.Col span="auto">
                             <Stack align="center">
-                                Shield
-                                <Image src={starRod} width={43} height={115}/>
-                                {fightData.Bowser.actionChances.shield + "%"}
-                            </Stack>
-                        </Grid.Col>
-                        <Grid.Col span="auto">
-                            <Stack align="center">
-                                Fire
-                                <Image src={fire} width={54} height={80}/>
-                                {fightData.Bowser.actionChances.fire + "%"}
-                            </Stack>
-                        </Grid.Col>
-                        <Grid.Col span="auto">
-                            <Stack align="center">
-                                Claw
-                                <Image src={claw} width={58} height={70}/>
-                                {fightData.Bowser.actionChances.claw + "%"}
-                            </Stack>
-                        </Grid.Col>
-                        <Grid.Col span="auto">
-                            <Stack align="center">
                                 Heal
                                 <Image src={heal} width={73} height={60}/>
                                 {fightData.Bowser.actionChances.heal + "%"}
@@ -285,9 +281,16 @@ export default function BowserStats() {
                         </Grid.Col>
                         <Grid.Col span="auto">
                             <Stack align="center">
-                                Stomp
-                                <Image src={butt} width={56} height={70}/>
-                                {fightData.Bowser.actionChances.buttstomp + "%"}
+                                Shield
+                                <Image src={starRod} width={43} height={115}/>
+                                {fightData.Bowser.actionChances.shield + "%"}
+                            </Stack>
+                        </Grid.Col>
+                        <Grid.Col span="auto">
+                            <Stack align="center">
+                                Wave
+                                <Image src={wave} width={80} height={53}/>
+                                {fightData.Bowser.actionChances.shockwave + "%"}
                             </Stack>
                         </Grid.Col>
                         <Grid.Col span="auto">
@@ -299,19 +302,33 @@ export default function BowserStats() {
                         </Grid.Col>
                         <Grid.Col span="auto">
                             <Stack align="center">
-                                Wave
-                                <Image src={wave} width={80} height={53}/>
-                                {fightData.Bowser.actionChances.shockwave + "%"}
+                                Stomp
+                                <Image src={butt} width={56} height={70}/>
+                                {fightData.Bowser.actionChances.buttstomp + "%"}
+                            </Stack>
+                        </Grid.Col>
+                        <Grid.Col span="auto">
+                            <Stack align="center">
+                                Claw
+                                <Image src={claw} width={58} height={70}/>
+                                {fightData.Bowser.actionChances.claw + "%"}
+                            </Stack>
+                        </Grid.Col>
+                        <Grid.Col span="auto">
+                            <Stack align="center">
+                                Fire
+                                <Image src={fire} width={54} height={80}/>
+                                {fightData.Bowser.actionChances.fire + "%"}
                             </Stack>
                         </Grid.Col>
                     </Grid>
                     <Divider mt={10} mb={10}/>
                     <Grid gutter="xl" align="center">
-                        <Grid.Col xs={"auto"} md={"auto"} span="auto">
+                        <Grid.Col md={"auto"} span="auto">
                             <MarioActionHandler/>
                         </Grid.Col>
                         <Divider orientation="vertical"/>
-                        <Grid.Col sm={1} md={"auto"} span="auto">
+                        <Grid.Col md={"auto"} span="auto">
                             <PartnerActionHandler/>
                         </Grid.Col>
                     </Grid>
