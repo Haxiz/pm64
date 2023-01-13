@@ -1,4 +1,4 @@
-import {Box, Button, Center, Chip, Divider, Grid, Group, Image, Stack, Text} from "@mantine/core";
+import {Box, Button, Center, Chip, Divider, Grid, Group, Image, NumberInput, Stack, Text} from "@mantine/core";
 import BowserSprite from "../../../Assets/Sprites/bowser.png";
 import BowserSpriteDead from "../../../Assets/Sprites/bowser-dead.png";
 import React, {useContext} from "react";
@@ -13,7 +13,11 @@ import butt from "../../../Assets/Sprites/mario-butt.png";
 import thunder from "../../../Assets/Sprites/thunder.png";
 import wave from "../../../Assets/Sprites/parakarry-dead.png";
 import BowserActionsI from "../../../Types/bowserActions.types";
-
+import bootBoost from "../../../Assets/Icons/boot-boost.png";
+import hammerBoost from "../../../Assets/Icons/hammer-boost.png";
+import wattBoost from "../../../Assets/Icons/watt-boost.png";
+import starBeam from "../../../Assets/Icons/star-beam.png";
+import peachBeam from "../../../Assets/Icons/peach-beam.png";
 
 export default function BowserStats() {
     const {classes} = pageStyles();
@@ -30,6 +34,8 @@ export default function BowserStats() {
     const [BowserTurnAction, setBowserTurnAction] = React.useState<string>("");
     const [MarioTurnAction, setMarioTurnAction] = React.useState<string>("");
     const [PartnerTurnAction, setPartnerTurnAction] = React.useState<string>("");
+    const [MarioDamage, setMarioDamage] = React.useState<number>(0);
+    const [PartnerDamage, setPartnerDamage] = React.useState<number>(0);
 
     function resetFight() {
         setBowser({
@@ -59,7 +65,7 @@ export default function BowserStats() {
 
     return (
         <Box className={classes.box}>
-            <Grid gutter="xl">
+            <Grid gutter="xl" align="center">
                 <Grid.Col sm={1} md={3}>
                     <Center>
                         <Stack>
@@ -80,8 +86,8 @@ export default function BowserStats() {
                     </Center>
                 </Grid.Col>
                 <Grid.Col sm={1} md="auto" span="auto">
-                    <Text mb={10}>
-                        Predicted Actions - Turn {turn}
+                    <Text fz="xl" mb={10} ta="center">
+                        Predicted Actions {turn !== 0 ? "- Turn " + turn : ""}
                     </Text>
                     <Divider mb={10}/>
                     <Grid align="center">
@@ -138,28 +144,69 @@ export default function BowserStats() {
                     <Divider mt={10} mb={10}/>
                     <Grid gutter="xl" align="center">
                         <Grid.Col xs={"auto"} md={"auto"} span="auto">
-                            <Text ta="center" mb={10}>Bowser's Action this turn</Text>
-                            <Chip.Group position="center" multiple={false} value={BowserTurnAction} onChange={setBowserTurnAction}>
-                                <Chip value="shield" disabled={turn === 0}>Shield</Chip>
-                                <Chip value="fire" disabled={turn === 0}>Fire</Chip>
-                                <Chip value="claw" disabled={turn === 0}>Claw</Chip>
-                                <Chip value="heal" disabled={turn === 0}>Heal</Chip>
-                                <Chip value="buttstomp" disabled={turn === 0}>Stomp</Chip>
-                                <Chip value="thunder" disabled={turn === 0}>Thunder</Chip>
-                                <Chip value="shockwave" disabled={turn === 0}>Wave</Chip>
-                            </Chip.Group>
-                        </Grid.Col>
-                        <Divider orientation="vertical"/>
-                        <Grid.Col sm={1} md={"auto"} span="auto">
-                            <Text ta="center" mb={10}>Your Actions this turn</Text>
-                            <Chip.Group position="center" multiple={false} value={MarioTurnAction} onChange={setMarioTurnAction}>
+                            <Text ta="center" mb={10}>Your Action this turn</Text>
+                            <Chip.Group position="center" multiple={false} value={MarioTurnAction}
+                                        onChange={setMarioTurnAction}>
+                                {/*
+                                <Chip value="misc" disabled={turn === 0}>Misc</Chip>
+                                <Chip value="item" disabled={turn === 0}>Item</Chip>
                                 <Chip value="jump" disabled={turn === 0}>Jump</Chip>
                                 <Chip value="hammer" disabled={turn === 0}>Hammer</Chip>
-                                <Chip value="item" disabled={turn === 0}>Item</Chip>
-
+                                <Chip value="starPower" disabled={turn === 0}>Star Power</Chip>
+                                */}
+                                <Chip value="attack" disabled={turn === 0}>Attack</Chip>
+                                <Chip value="boost" disabled={turn === 0}>Boost</Chip>
+                                <Chip value="beam" disabled={turn === 0}>Star Beam</Chip>
+                                <Chip value="skip" disabled={turn === 0}>Skip</Chip>
                             </Chip.Group>
+                            <Divider mt={10} mb={10} variant="dashed"
+                                     hidden={MarioTurnAction === "" || MarioTurnAction === "skip"}/>
+                            <NumberInput placeholder="How much damage?" hidden={!(MarioTurnAction === "attack")}
+                                         onChange={(v) => v ? setMarioDamage(v) : setMarioDamage(0)}/>
+                            <Group position="center" hidden={!(MarioTurnAction === "boost")}>
+                                <Image src={bootBoost} width={46} height={44}/>
+                                or
+                                <Image src={hammerBoost} width={46} height={44}/>
+                            </Group>
+                            <Group position="center" hidden={!(MarioTurnAction === "beam")}>
+                                <Image src={starBeam} width={48} height={48}/>
+                                or
+                                <Image src={peachBeam} width={48} height={48}/>
+                            </Group>
+                        </Grid.Col>
+
+                        <Divider orientation="vertical"/>
+
+                        <Grid.Col sm={1} md={"auto"} span="auto">
+                            <Text ta="center" mb={10}>Your Partner's Action this turn</Text>
+                            <Chip.Group position="center" multiple={false} value={PartnerTurnAction}
+                                        onChange={setPartnerTurnAction}>
+                                <Chip value="attack" disabled={turn === 0}>Attack</Chip>
+                                <Chip value="boost" disabled={turn === 0}>Boost</Chip>
+                                <Chip value="skip" disabled={turn === 0}>Skip</Chip>
+                            </Chip.Group>
+                            <Divider mt={10} mb={10} variant="dashed"
+                                     hidden={PartnerTurnAction === "" || PartnerTurnAction === "skip"}/>
+                            <NumberInput placeholder="How much damage?" hidden={!(PartnerTurnAction === "attack")}
+                                         onChange={(v) => v ? setPartnerDamage(v) : setPartnerDamage(0)}/>
+                            <Center>
+                                <Image src={wattBoost} width={48} height={48}
+                                       hidden={!(PartnerTurnAction === "boost")}/>
+                            </Center>
                         </Grid.Col>
                     </Grid>
+                    <Divider mt={10} mb={10}/>
+                    <Text ta="center" mb={10}>Bowser's Action this turn</Text>
+                    <Chip.Group position="center" multiple={false} value={BowserTurnAction}
+                                onChange={setBowserTurnAction}>
+                        <Chip value="shield" disabled={turn === 0}>Shield</Chip>
+                        <Chip value="fire" disabled={turn === 0}>Fire</Chip>
+                        <Chip value="claw" disabled={turn === 0}>Claw</Chip>
+                        <Chip value="heal" disabled={turn === 0}>Heal</Chip>
+                        <Chip value="buttstomp" disabled={turn === 0}>Stomp</Chip>
+                        <Chip value="thunder" disabled={turn === 0}>Thunder</Chip>
+                        <Chip value="shockwave" disabled={turn === 0}>Wave</Chip>
+                    </Chip.Group>
                 </Grid.Col>
 
             </Grid>
