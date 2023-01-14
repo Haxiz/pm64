@@ -7,8 +7,8 @@ import React, {useState} from "react";
 import MarioI from "../../Types/mario.type";
 import BowserI from "../../Types/bowser.types";
 import BasicStats from "./Components/BasicStats";
-import BowserStats from "./Components/BowserStats";
 import PartnerI from "../../Types/partner.types";
+import FightTabs from "./Components/FightTabs";
 
 interface FightDataI {
     Mario: MarioI,
@@ -16,6 +16,7 @@ interface FightDataI {
     Bowser: BowserI,
     turn: number,
     first: string,
+    phase: number,
 }
 
 interface FightContextI {
@@ -52,11 +53,9 @@ export default function FinalBowser() {
             shield: false,
             turnsInfo: {
                 turnsSinceShield: 0,
-                turnsSinceFire: 0,
                 turnsSinceClaw: 0,
                 turnsSinceHeal: 0,
                 turnsSinceStomp: 0,
-                turnsSinceThunder: 0,
                 turnsSinceShockwave: 0,
             },
             action: "",
@@ -72,6 +71,7 @@ export default function FinalBowser() {
         },
         turn: 0,
         first: "Mario",
+        phase: 1,
     })
 
     function resetData() {
@@ -101,11 +101,9 @@ export default function FinalBowser() {
                 shield: false,
                 turnsInfo: {
                     turnsSinceShield: 0,
-                    turnsSinceFire: 0,
                     turnsSinceClaw: 0,
                     turnsSinceHeal: 0,
                     turnsSinceStomp: 0,
-                    turnsSinceThunder: 0,
                     turnsSinceShockwave: 0,
                 },
                 action: "",
@@ -121,6 +119,7 @@ export default function FinalBowser() {
             },
             turn: 0,
             first: "Mario",
+            phase: 1,
         });
     }
 
@@ -142,7 +141,7 @@ export default function FinalBowser() {
                     </Grid.Col>
                     {/* Chances */}
                     <Grid.Col md={9} lg={9}>
-                        <BowserStats/>
+                        <FightTabs/>
                     </Grid.Col>
                 </Grid>
             </Container>
