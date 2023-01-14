@@ -20,6 +20,8 @@ import errorNotification from "../../../Services/Utils/Notifications/error.util"
 import warningNotification from "../../../Services/Utils/Notifications/warning.util";
 import successNotification from "../../../Services/Utils/Notifications/success.util";
 import star from "../../../Assets/Icons/star.png"
+import starBeam from "../../../Assets/Icons/star-beam.png";
+import peachBeam from "../../../Assets/Icons/peach-beam.png";
 
 export default function BowserStats() {
     const {classes} = pageStyles();
@@ -252,6 +254,7 @@ export default function BowserStats() {
                                 <Text fz="xl" mb={10} ta="center">
                                     Post Twink
                                 </Text>
+                                <Image mb={10} src={peachBeam} width={24} height={24} />
                                 <Image mb={10} src={twink} width={24} height={24}/>
                             </Group>
                             :
@@ -259,7 +262,7 @@ export default function BowserStats() {
                                 <Text fz="xl" mb={10} ta="center">
                                     Pre Twink
                                 </Text>
-                                <Image mb={10} src={twink} width={24} height={24}/>
+                                <Image mb={10} src={starBeam} width={24} height={24} />
                             </Group>
                         }
                     </Stack>
@@ -295,7 +298,7 @@ export default function BowserStats() {
                         </Grid.Col>
                         <Grid.Col span="auto">
                             <Stack align="center">
-                                Thunder
+                                Lightning
                                 <Image src={thunder} width={60} height={60}/>
                                 {fightData.Bowser.actionChances.thunder + "%"}
                             </Stack>
