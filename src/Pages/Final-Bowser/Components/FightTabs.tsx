@@ -10,6 +10,8 @@ import warningNotification from "../../../Services/Utils/Notifications/warning.u
 import PhaseOne from "./PhaseOne";
 import BowserActionsI from "../../../Types/bowserActions.types";
 import successNotification from "../../../Services/Utils/Notifications/success.util";
+import MarioI from "../../../Types/mario.type";
+import BowserI from "../../../Types/bowser.types";
 
 export default function FightTabs() {
     const {classes} = pageStyles();
@@ -88,7 +90,7 @@ export default function FightTabs() {
         return error;
     }
 
-    function handlePredictions() {
+    function handlePredictions(phase: number, mario: MarioI, bowser: BowserI) {
         let turn = fightData.turn + 1;
         let totalPredictionPercent = 100;
         let predictions: BowserActionsI = {
@@ -100,7 +102,7 @@ export default function FightTabs() {
             thunder: 0,
             shockwave: 0,
         }
-        if (fightData.phase === 1) {
+        if (phase === 1) {
             if (turn === 1) {
                 //Selecting normal move
                 //Stomp has 25% chance of being selected
@@ -120,21 +122,86 @@ export default function FightTabs() {
             }
         } else {
             //Heal
-            let marioHPPercent = fightData.Mario.hp / fightData.Mario.maxHP * 100;
-            let bowserHPPercent = fightData.Bowser.hp / fightData.Bowser.maxHP * 100;
+            let marioHPPercent = mario.hp / mario.maxHP * 100;
+            let bowserHPPercent = bowser.hp / bowser.maxHP * 100;
             if (marioHPPercent - bowserHPPercent >= 25) {
-                if (fightData.Bowser.heals < 3 && fightData.Bowser.turnsInfo.turnsSinceHeal > 1) {
+                if (bowser.heals < 3 && bowser.turnsInfo.turnsSinceHeal > 1) {
                     predictions.heal = handlePercentage(75, totalPredictionPercent);
                     totalPredictionPercent -= predictions.heal;
                 }
             }
             // Shield
-            if ((fightData.Bowser.turnsInfo.turnsSinceShield > 1) && !fightData.Bowser.shield) {
-                if (fightData.Bowser.turnsInfo.turnsSinceShield === 3) {
+            if ((bowser.turnsInfo.turnsSinceShield > 1) && !bowser.shield) {
+                if (bowser.turnsInfo.turnsSinceShield === 3) {
                     predictions.shield = handlePercentage(15, totalPredictionPercent);
-                } else if (fightData.Bowser.turnsInfo.turnsSinceShield > 3) {
+                    totalPredictionPercent -= predictions.shield;
+                } else if (bowser.turnsInfo.turnsSinceShield > 3) {
                     predictions.shield = handlePercentage(75, totalPredictionPercent);
+                    totalPredictionPercent -= predictions.shield;
                 }
+            }
+            // After shockwave
+            if (bowser.turnsInfo.turnsSinceShockwave < 3) {
+                if (totalPredictionPercent > 0) {
+                    //Selecting normal move
+                    //Stomp has 25% chance of being selected
+                    predictions.buttstomp = handlePercentage(25, totalPredictionPercent);
+                    totalPredictionPercent -= predictions.buttstomp;
+                    //Claw has a 33% chance of being selected
+                    predictions.claw = handlePercentage(33, totalPredictionPercent);
+                    totalPredictionPercent -= predictions.claw;
+                    //Fire takes the rest
+                    predictions.fire = totalPredictionPercent;
+                    totalPredictionPercent -= predictions.fire;
+                }
+            }
+            // First 3 turns
+            if (turn <= 3) {
+                if (totalPredictionPercent > 0) {
+                    //Selecting normal move
+                    //Stomp has 25% chance of being selected
+                    predictions.buttstomp = handlePercentage(25, totalPredictionPercent);
+                    totalPredictionPercent -= predictions.buttstomp;
+                    //Claw has a 33% chance of being selected
+                    predictions.claw = handlePercentage(33, totalPredictionPercent);
+                    totalPredictionPercent -= predictions.claw;
+                    //Fire takes the rest
+                    predictions.fire = totalPredictionPercent;
+                    totalPredictionPercent -= predictions.fire;
+                }
+            }
+            // Shockwave
+            if (bowser.turnsInfo.turnsSinceShockwave >= 6) {
+                if (totalPredictionPercent > 0) {
+                    predictions.shockwave = handlePercentage(66, totalPredictionPercent);
+                    totalPredictionPercent -= predictions.shockwave;
+                    predictions.thunder = totalPredictionPercent;
+                    totalPredictionPercent -= predictions.thunder;
+                }
+            }
+            if (mario.buffed) {
+                if (totalPredictionPercent > 0) {
+                    predictions.shockwave = handlePercentage(75, totalPredictionPercent);
+                    totalPredictionPercent -= predictions.shockwave;
+                }
+            } else {
+                if (totalPredictionPercent > 0) {
+                    predictions.shockwave = handlePercentage(handlePercentage(66, 27), totalPredictionPercent);
+                    totalPredictionPercent -= predictions.shockwave;
+                    predictions.thunder = handlePercentage(handlePercentage(34, 27), totalPredictionPercent);
+                }
+            }
+            // Normal moves
+            if (totalPredictionPercent > 0) {
+                //Stomp has 25% chance of being selected
+                predictions.buttstomp = handlePercentage(25, totalPredictionPercent);
+                totalPredictionPercent -= predictions.buttstomp;
+                //Claw has a 33% chance of being selected
+                predictions.claw = handlePercentage(33, totalPredictionPercent);
+                totalPredictionPercent -= predictions.claw;
+                //Fire takes the rest
+                predictions.fire = totalPredictionPercent;
+                totalPredictionPercent -= predictions.fire;
             }
         }
         return predictions;
@@ -146,7 +213,7 @@ export default function FightTabs() {
 
     function handleNextTurn() {
         if (fightData.turn === 0 && fightData.phase === 1) {
-            let predictions = handlePredictions();
+            let predictions = handlePredictions(fightData.phase, fightData.Mario, fightData.Bowser);
             setFightData({
                 ...fightData,
                 turn: 1,
@@ -182,6 +249,7 @@ export default function FightTabs() {
                     break;
                 case "beam":
                     bowser.shield = false;
+                    bowser.turnsInfo.turnsSinceShield = 0;
                     break;
                 case "skip":
                     break;
@@ -247,10 +315,6 @@ export default function FightTabs() {
                 partner.buffTurns--;
             }
 
-            // Getting Bowser's move prediction
-            let predictions = handlePredictions();
-            bowser.actionChances = predictions;
-
             // Updating turn info
             turn++;
             if (turn >= 3 && phase === 1) {
@@ -269,6 +333,9 @@ export default function FightTabs() {
                 bowser.action = "shield";
             }
 
+            // Getting Bowser's move prediction
+            let predictions = handlePredictions(phase, mario, bowser);
+            bowser.actionChances = predictions;
 
             setFightData({
                 ...fightData,

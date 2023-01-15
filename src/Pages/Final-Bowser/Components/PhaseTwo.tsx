@@ -24,7 +24,7 @@ export default function PhaseTwo({resetFight, handleNextTurn}: any) {
         <Grid gutter="xl" align="center" mt={10}>
             <Grid.Col sm={3} md={3}>
                 <Stack align="center">
-                    <Indicator color="yellow" position="top-end" label={<Image src={star}/>} size={25}
+                    <Indicator color="yellow" position="top-end" label={<Image src={star}/>} size={40}
                                withBorder processing hidden={!fightData.Bowser.shield} offset={20}>
                         <Image src={BowserSprite} height={230} width={228} hidden={!(fightData.Bowser.hp > 0)}/>
                     </Indicator>
