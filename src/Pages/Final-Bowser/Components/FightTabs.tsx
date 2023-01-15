@@ -124,7 +124,7 @@ export default function FightTabs() {
             let marioHPPercent = mario.hp / mario.maxHP * 100;
             let bowserHPPercent = bowser.hp / bowser.maxHP * 100;
             if (marioHPPercent - bowserHPPercent >= 25) {
-                if (bowser.heals < 3 && bowser.turnsInfo.turnsSinceHeal > 1) {
+                if (bowser.heals < 3 && bowser.turnsInfo.turnsSinceHeal >= 1) {
                     predictions.heal = handlePercentage(75, totalPredictionPercent);
                     totalPredictionPercent -= predictions.heal;
                 }
