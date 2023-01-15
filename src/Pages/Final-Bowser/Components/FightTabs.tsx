@@ -90,8 +90,7 @@ export default function FightTabs() {
         return error;
     }
 
-    function handlePredictions(phase: number, mario: MarioI, bowser: BowserI) {
-        let turn = fightData.turn + 1;
+    function handlePredictions(turn: number, phase: number, mario: MarioI, bowser: BowserI) {
         let totalPredictionPercent = 100;
         let predictions: BowserActionsI = {
             shield: 0,
@@ -144,12 +143,16 @@ export default function FightTabs() {
             if (bowser.turnsInfo.turnsSinceShockwave < 3) {
                 if (totalPredictionPercent > 0) {
                     //Selecting normal move
-                    //Stomp has 25% chance of being selected
-                    predictions.buttstomp = handlePercentage(25, totalPredictionPercent);
-                    totalPredictionPercent -= predictions.buttstomp;
-                    //Claw has a 33% chance of being selected
-                    predictions.claw = handlePercentage(33, totalPredictionPercent);
-                    totalPredictionPercent -= predictions.claw;
+                    if (bowser.turnsInfo.turnsSinceStomp > 1) {
+                        //Stomp has 25% chance of being selected
+                        predictions.buttstomp = handlePercentage(25, totalPredictionPercent);
+                        totalPredictionPercent -= predictions.buttstomp;
+                    }
+                    if (bowser.turnsInfo.turnsSinceClaw > 1) {
+                        //Claw has a 33% chance of being selected
+                        predictions.claw = handlePercentage(33, totalPredictionPercent);
+                        totalPredictionPercent -= predictions.claw;
+                    }
                     //Fire takes the rest
                     predictions.fire = totalPredictionPercent;
                     totalPredictionPercent -= predictions.fire;
@@ -159,12 +162,16 @@ export default function FightTabs() {
             if (turn <= 3) {
                 if (totalPredictionPercent > 0) {
                     //Selecting normal move
-                    //Stomp has 25% chance of being selected
-                    predictions.buttstomp = handlePercentage(25, totalPredictionPercent);
-                    totalPredictionPercent -= predictions.buttstomp;
-                    //Claw has a 33% chance of being selected
-                    predictions.claw = handlePercentage(33, totalPredictionPercent);
-                    totalPredictionPercent -= predictions.claw;
+                    if (bowser.turnsInfo.turnsSinceStomp > 1) {
+                        //Stomp has 25% chance of being selected
+                        predictions.buttstomp = handlePercentage(25, totalPredictionPercent);
+                        totalPredictionPercent -= predictions.buttstomp;
+                    }
+                    if (bowser.turnsInfo.turnsSinceClaw > 1) {
+                        //Claw has a 33% chance of being selected
+                        predictions.claw = handlePercentage(33, totalPredictionPercent);
+                        totalPredictionPercent -= predictions.claw;
+                    }
                     //Fire takes the rest
                     predictions.fire = totalPredictionPercent;
                     totalPredictionPercent -= predictions.fire;
@@ -213,7 +220,7 @@ export default function FightTabs() {
 
     function handleNextTurn() {
         if (fightData.turn === 0 && fightData.phase === 1) {
-            let predictions = handlePredictions(fightData.phase, fightData.Mario, fightData.Bowser);
+            let predictions = handlePredictions(1, fightData.phase, fightData.Mario, fightData.Bowser);
             setFightData({
                 ...fightData,
                 turn: 1,
@@ -249,7 +256,7 @@ export default function FightTabs() {
                     break;
                 case "beam":
                     bowser.shield = false;
-                    bowser.turnsInfo.turnsSinceShield = 0;
+                    bowser.turnsInfo.turnsSinceShield = 1;
                     break;
                 case "skip":
                     break;
@@ -321,11 +328,11 @@ export default function FightTabs() {
                 setActiveTab("second");
                 phase = 2;
                 turn = 1;
-                bowser.turnsInfo.turnsSinceShockwave = 0;
-                bowser.turnsInfo.turnsSinceClaw = 0;
-                bowser.turnsInfo.turnsSinceStomp = 0;
-                bowser.turnsInfo.turnsSinceShield = 0;
-                bowser.turnsInfo.turnsSinceHeal = 0;
+                bowser.turnsInfo.turnsSinceShockwave = 1;
+                bowser.turnsInfo.turnsSinceClaw = 3;
+                bowser.turnsInfo.turnsSinceStomp = 3;
+                bowser.turnsInfo.turnsSinceShield = 1;
+                bowser.turnsInfo.turnsSinceHeal = 1;
                 mario.hp = mario.maxHP;
                 mario.fp = mario.maxFP;
             }
@@ -334,7 +341,7 @@ export default function FightTabs() {
             }
 
             // Getting Bowser's move prediction
-            let predictions = handlePredictions(phase, mario, bowser);
+            let predictions = handlePredictions(turn, phase, mario, bowser);
             bowser.actionChances = predictions;
 
             setFightData({
