@@ -1,5 +1,5 @@
 import pageStyles from "../../../Styles/page.styles";
-import {useContext, useState} from "react";
+import {useContext, useEffect, useState} from "react";
 import {FightContext} from "../FinalBowser";
 import {Box, Image, Tabs} from "@mantine/core";
 import PhaseTwo from "./PhaseTwo";
@@ -124,7 +124,7 @@ export default function FightTabs() {
             let marioHPPercent = mario.hp / mario.maxHP * 100;
             let bowserHPPercent = bowser.hp / bowser.maxHP * 100;
             if (marioHPPercent - bowserHPPercent >= 25) {
-                if (bowser.heals < 3 && bowser.turnsInfo.turnsSinceHeal >= 1) {
+                if (bowser.heals < 3 && bowser.turnsInfo.turnsSinceHeal > 1) {
                     predictions.heal = handlePercentage(75, totalPredictionPercent);
                     totalPredictionPercent -= predictions.heal;
                 }
@@ -341,8 +341,7 @@ export default function FightTabs() {
             }
 
             // Getting Bowser's move prediction
-            let predictions = handlePredictions(turn, phase, mario, bowser);
-            bowser.actionChances = predictions;
+            bowser.actionChances = handlePredictions(turn, phase, mario, bowser);
 
             setFightData({
                 ...fightData,
@@ -356,6 +355,25 @@ export default function FightTabs() {
         }
     }
 
+    function handleUpdatePredictions() {
+        let turn = fightData.turn;
+        let phase = fightData.phase;
+        let mario = fightData.Mario;
+        let bowser = fightData.Bowser;
+        bowser.actionChances = handlePredictions(turn, phase, mario, bowser);
+        setFightData({
+            ...fightData,
+            Bowser: bowser,
+        });
+    }
+
+    useEffect(() => {
+        if (fightData.turn > 0) {
+            console.log("Updating predictions");
+            handleUpdatePredictions();
+        }
+    }, [fightData.Mario.hp, fightData.Bowser.hp, fightData.turn, fightData.phase]);
+    
     return (
         <Box className={classes.box}>
             <Tabs value={activeTab} onTabChange={setActiveTab}>

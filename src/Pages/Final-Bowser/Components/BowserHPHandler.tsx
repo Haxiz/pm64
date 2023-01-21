@@ -50,7 +50,8 @@ export default function BowserHPHandler() {
                     <Image src={HP} height={29} width={44}/>
                     {getNumberIcon(fightData.Bowser.hp, "white")}
                 </Group>
-                <Button onClick={() => setOpened((o) => !o)} size="sm" radius="xl" variant="subtle" compact disabled={fightData.turn === 0}>
+                <Button onClick={() => setOpened((o) => !o)} size="sm" radius="xl" variant="subtle" compact
+                        disabled={fightData.turn === 0}>
                     Toggle Manual HP
                 </Button>
                 <Collapse in={opened}>
