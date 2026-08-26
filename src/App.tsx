@@ -1,5 +1,4 @@
 import React, {useState} from 'react';
-import logo from './logo.svg';
 import './App.css';
 import {ColorScheme, ColorSchemeProvider, MantineProvider} from "@mantine/core";
 import Home from "./Pages/Home/Home";

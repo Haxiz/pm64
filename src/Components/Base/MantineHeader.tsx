@@ -1,7 +1,6 @@
 import {
     ActionIcon,
-    Burger, Container,
-    Flex,
+    Burger,
     Group,
     Header,
     MediaQuery,

@@ -1,5 +1,5 @@
 import pageStyles from "../../../Styles/page.styles";
-import {useContext, useEffect, useState} from "react";
+import {useContext, useEffect, useRef, useState} from "react";
 import {FightContext} from "../FinalBowser";
 import {Box, Image, Tabs} from "@mantine/core";
 import PhaseTwo from "./PhaseTwo";
@@ -446,11 +446,16 @@ export default function FightTabs() {
         });
     }
 
+    // Ref always points to the latest handleUpdatePredictions so the
+    // effect below can call it without listing it as a dependency.
+    const updateRef = useRef(handleUpdatePredictions);
+    updateRef.current = handleUpdatePredictions;
+
     // Keep predictions in sync when the user edits HP/buff values between turns.
     useEffect(() => {
         if (fightData.turn > 0) {
             console.log("Updating predictions");
-            handleUpdatePredictions();
+            updateRef.current();
         }
     }, [fightData.Mario.hp, fightData.Bowser.hp, fightData.turn, fightData.phase,
         fightData.Bowser.turnsInfo.turnsSinceShockwave, fightData.Bowser.turnsInfo.turnsSinceClaw,

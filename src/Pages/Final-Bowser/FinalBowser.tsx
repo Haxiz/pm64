@@ -74,55 +74,6 @@ export default function FinalBowser() {
         phase: 1,
     })
 
-    function resetData() {
-        setFightData({
-            Mario: {
-                maxHP: 10,
-                hp: 10,
-                maxFP: 10,
-                fp: 10,
-                hammer: "Hammer",
-                boots: "Boots",
-                badges: [],
-                items: [],
-                buffed: false,
-                action: "",
-                damage: 0,
-            },
-            Partner: {
-                action: "",
-                damage: 0,
-                buffTurns: 0,
-            },
-            Bowser: {
-                maxHP: 99,
-                hp: 99,
-                heals: 0,
-                shield: false,
-                turnsInfo: {
-                    turnsSinceShield: 0,
-                    turnsSinceClaw: 0,
-                    turnsSinceHeal: 0,
-                    turnsSinceStomp: 0,
-                    turnsSinceShockwave: 0,
-                },
-                action: "",
-                actionChances: {
-                    shield: 0,
-                    fire: 0,
-                    claw: 0,
-                    heal: 0,
-                    buttstomp: 0,
-                    thunder: 0,
-                    shockwave: 0,
-                }
-            },
-            turn: 0,
-            first: "Mario",
-            phase: 1,
-        });
-    }
-
     const fightContext = {
         fightData,
         setFightData,

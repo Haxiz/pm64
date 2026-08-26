@@ -1,5 +1,5 @@
 import React from "react";
-import {Text, Group, ThemeIcon, UnstyledButton, Image} from '@mantine/core';
+import {Text, Group, UnstyledButton, Image} from '@mantine/core';
 import {useNavigate} from "react-router-dom";
 
 interface NavbarProps {
