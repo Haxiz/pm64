@@ -295,6 +295,26 @@ describe("Phase 2 shockwave cooldown", () => {
         expect(predictions.thunder).toBe(2);
     });
 
+    test("Path 3: a partner's boost alone does not trigger the 75% charge gate", () => {
+        // Verified against src/common/GetJumpHammerCharge.inc.c (upstream
+        // pmret/papermario): it only reads gBattleStatus.jumpCharge/
+        // hammerCharge, which are set exclusively by Mario's OWN Charge
+        // move. A partner's boost (e.g. Watt's Turbo Charge) sets a
+        // completely separate field that dmg_player.c never combines with
+        // jumpCharge/hammerCharge (Logic.md §11.5). So an uncharged Mario
+        // with a boosted partner should behave identically to a fully
+        // uncharged pair -- no 75% shockwave-gate bonus either way.
+        const uncharged = makeMario({buffed: false});
+        const bowser = makeBowser({
+            shield: true,
+            turnsInfo: {turnsSinceShield: 4, turnsSinceClaw: 6, turnsSinceHeal: 4, turnsSinceStomp: 0, turnsSinceShockwave: 4},
+        });
+        const withoutPartnerBoost = handlePredictions(4, 2, uncharged, bowser, makePartner({buffTurns: 0}));
+        const withPartnerBoost = handlePredictions(4, 2, uncharged, bowser, makePartner({buffTurns: 5}));
+        expect(withPartnerBoost).toEqual(withoutPartnerBoost);
+        expect(withPartnerBoost.shockwave).toBeLessThan(75); // no 75% gate bonus applied
+    });
+
     test("turnsSinceShockwave >= 6: forced shockwave/thunder, no regular attacks", () => {
         const predictions = handlePredictions(20, 2, mario, bowserWith(6), makePartner());
         expect(predictions.buttstomp).toBe(0);

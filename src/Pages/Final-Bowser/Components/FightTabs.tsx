@@ -110,9 +110,18 @@ export function handlePredictions(turn: number, phase: number, mario: MarioI, bo
         //
         // Path 3: General case (3 ≤ TurnsSinceShockwave < 6, TurnCount > 3)
         //         → 75% gate: check GetJumpHammerCharge (Mario's jump/hammer
-        //           charge) → shockwave if any charge exists. The calculator
-        //           tracks this via `mario.buffed` (Mario boosting himself)
-        //           or `partner.buffTurns > 0` (a partner boosting Mario).
+        //           charge) → shockwave if any charge exists. Verified against
+        //           the actual decompiled source (pmret/papermario,
+        //           src/common/GetJumpHammerCharge.inc.c): it only reads
+        //           gBattleStatus.jumpCharge/hammerCharge, which are set
+        //           exclusively by Mario's own Charge move
+        //           (src/battle/move/jump/hammer/jump_charge_*.c) — a
+        //           partner's boost (e.g. Watt's Turbo Charge) sets a
+        //           completely separate field (turboChargeTurnsLeft) that
+        //           dmg_player.c never combines with jumpCharge/hammerCharge.
+        //           So only `mario.buffed` counts here, not the partner's
+        //           buff (see Logic.md §11.5 — this used to also check
+        //           `partner.buffTurns > 0`, which was wrong).
         //           If the gate fires, shockwave is taken; otherwise it falls
         //           through.
         //         → ~27% gate: RandInt(110) < 30 → shockwave (20/30) or
@@ -144,12 +153,13 @@ export function handlePredictions(turn: number, phase: number, mario: MarioI, bo
         } else {
             // Path 3 general case.
             // Game: 75% gate (final_bowser_2.c:1019-1030) checks
-            // GetJumpHammerCharge (Mario's jump/hammer charge). If Mario is
-            // charged — by boosting himself or via a partner boost — the gate
-            // fires 75% of the time → shockwave. The remaining 25% still
-            // passes through the ~27% gate below.
+            // GetJumpHammerCharge (Mario's jump/hammer charge). If Mario has
+            // charged HIMSELF — a partner's boost does not count, see the
+            // comment above and Logic.md §11.5 — the gate fires 75% of the
+            // time → shockwave. The remaining 25% still passes through the
+            // ~27% gate below.
             if (totalPredictionPercent > 0) {
-                const marioCharged = mario.buffed || partner.buffTurns > 0;
+                const marioCharged = mario.buffed;
                 if (marioCharged) {
                     predictions.shockwave = handlePercentage(75, totalPredictionPercent);
                     totalPredictionPercent -= predictions.shockwave;

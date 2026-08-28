@@ -259,15 +259,13 @@ The game has two nested probability gates:
 
 **Calculator:** `else` branch
 
-The calculator **does** track Mario's charge. `GetJumpHammerCharge`
-(Mario's jump/hammer charge) is represented by `mario.buffed` (Mario
-boosting himself) or `partner.buffTurns > 0` (a partner boosting Mario).
-When charged, the 75% gate fires: 75% of the pool is taken as shockwave,
-and the remaining 25% still passes through the ~27% gate below. When
-*not* charged, the whole pool passes through the ~27% gate.
+The calculator **does** track Mario's charge, via `mario.buffed`. When
+charged, the 75% gate fires: 75% of the pool is taken as shockwave, and
+the remaining 25% still passes through the ~27% gate below. When *not*
+charged, the whole pool passes through the ~27% gate.
 
 ```
-if (mario.buffed || partner.buffTurns > 0):
+if (mario.buffed):
     shockwave += 75% of pool        // 75% gate
     remaining  = 25% of pool
 else:
@@ -276,6 +274,9 @@ shockwave += floor(66% × 27%) of remaining  ≈ 18% of remaining
 thunder   += floor(34% × 27%) of remaining  ≈ 9%  of remaining
 rest       → regular attack pool (stomp / claw / fire)
 ```
+
+A partner's boost (`partner.buffTurns > 0`) does **not** feed into this
+check — confirmed against the actual decompiled source, see §11.5.
 
 Worked example (Mario charged, full 100% pool):
 - `shockwave = 75` (75% gate), `remaining = 25`
@@ -344,14 +345,13 @@ Mario's HP and FP are also fully restored at the transition.
 ## 10. Known Differences / Limitations
 
 1. **Mario's jump/hammer charge is tracked.** The game's 75% gate in
-   `EVS_UseAttackOrShockwave` checks `GetJumpHammerCharge` — **Mario's**
-   jump/hammer charge (not the partner's). The calculator models this via
-   `mario.buffed` (Mario boosting himself) and `partner.buffTurns > 0`
-   (a partner boosting Mario). When charged, the 75% gate takes 75% of the
-   pool as shockwave and the remaining 25% still passes through the ~27%
-   gate, giving ≈ 79% shockwave total — matching the game (75% +
-   25% × 18.2% ≈ 79.5%) within integer-rounding error. The only residual
-   inaccuracy is rounding (see item 2).
+   `EVS_UseAttackOrShockwave` checks `GetJumpHammerCharge` — **Mario's own**
+   jump/hammer charge only (a partner's boost does not count, see §11.5).
+   The calculator models this via `mario.buffed`. When charged, the 75%
+   gate takes 75% of the pool as shockwave and the remaining 25% still
+   passes through the ~27% gate, giving ≈ 79% shockwave total — matching
+   the game (75% + 25% × 18.2% ≈ 79.5%) within integer-rounding error. The
+   only residual inaccuracy is rounding (see item 2).
 
 2. **Rounding.** The calculator uses integer `Math.floor` at each step.
    Small probability pools (e.g. after heal + shield deductions) may cause
@@ -373,7 +373,7 @@ Mario's HP and FP are also fully restored at the transition.
 
 ---
 
-## 11. Verified Discrepancies (Audit) — all fixed 2026-08-28
+## 11. Verified Discrepancies (Audit) — all fixed 2026-08-28 (§11.5: 2026-08-28, source-verified)
 
 **Method:** `src/Logic/finalBowserReference.ts` is a direct TypeScript port
 of the decision-only logic in `EVS_TakeTurn_Inner`, `EVS_UseAttackOrShockwave`,
@@ -387,8 +387,8 @@ through matching turn states and asserts the same actions are reachable
 that bug doesn't change *reachability*, only the split between two already-
 reachable actions). Run it with `npm test -- FightTabs.logic`.
 
-The four bugs below were found this way, then fixed in `FightTabs.tsx`; the
-suite is now fully green (20/20) and stands as the permanent regression net
+The five bugs below were found this way, then fixed in `FightTabs.tsx`; the
+suite is fully green (21/21) and stands as the permanent regression net
 for this class of bug. Unlike §10's items (which are intentional, low-impact
 simplifications), these were unintended and changed what the calculator
 predicted Bowser would do.
@@ -486,6 +486,50 @@ predictions.shockwave += gate2Shockwave;
 predictions.thunder = gate2Thunder;
 totalPredictionPercent -= gate2Shockwave + gate2Thunder;
 ```
+
+### 11.5 A partner's boost was wrongly counted toward Mario's own charge — fixed
+
+`handlePredictions`, Path 3 (general case), used:
+
+```js
+const marioCharged = mario.buffed || partner.buffTurns > 0;
+```
+
+Unlike §11.1–11.4 (found by the reference-model test suite), this one was
+found by reading the actual upstream source directly. The game function
+Bowser's AI calls, `GetJumpHammerCharge`, is genuinely defined in
+`src/common/GetJumpHammerCharge.inc.c` in the decompiled game
+(pmret/papermario on GitHub):
+
+```c
+API_CALLABLE(N(GetJumpHammerCharge)) {
+    ...
+    evt_set_variable(script, *args++, gBattleStatus.jumpCharge);
+    evt_set_variable(script, *args++, gBattleStatus.hammerCharge);
+    return ApiStatus_DONE2;
+}
+```
+
+It reads only `gBattleStatus.jumpCharge` / `gBattleStatus.hammerCharge`.
+Tracing those fields through the rest of the decompiled source:
+
+- **Set by:** `src/battle/move/jump/jump_charge_0.c` (`battleStatus->jumpCharge++`)
+  and its hammer-side equivalent — Mario's own "Charge" jump/hammer move,
+  paid for with his own FP. Nothing in a partner's script touches either
+  field.
+- **A partner's boost is a different mechanic entirely.** Watt's Turbo
+  Charge (`ApplyTurboCharge` in `src/battle/partner/watt.c`) sets
+  `battleStatus->turboChargeTurnsLeft` / `turboChargeAmount` — a
+  completely separate pair of fields.
+- **They never combine.** `src/battle/dmg_player.c` adds `jumpCharge`/
+  `hammerCharge` and `turboChargeTurnsLeft` to attack damage as two fully
+  independent bonuses; nothing ever copies one into the other.
+
+So a partner's boost has no bearing on `GetJumpHammerCharge`, and
+therefore none on Bowser's shockwave gate. **Effect:** the calculator
+over-predicted shockwave whenever a partner (not Mario) was the one
+charged — the 75% gate should not have fired in that case. **Fix
+applied:** `marioCharged` is now just `mario.buffed`.
 
 ### Not a bug (checked, kept for the record)
 
