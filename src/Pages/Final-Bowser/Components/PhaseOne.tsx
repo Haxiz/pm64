@@ -1,6 +1,6 @@
 import React, {useContext} from "react";
 import {FightContext} from "../FinalBowser";
-import {Button, Center, Divider, Grid, Group, Image, Indicator, Stack, Text} from "@mantine/core";
+import {Button, Center, Divider, Grid, Group, Image, Indicator, Stack, Switch, Text} from "@mantine/core";
 import star from "../../../Assets/Icons/star.png";
 import BowserSprite from "../../../Assets/Sprites/bowser.png";
 import BowserSpriteDead from "../../../Assets/Sprites/bowser-dead.png";
@@ -13,7 +13,7 @@ import MarioActionHandler from "./MarioActionHandler";
 import PartnerActionHandler from "./PartnerActionHandler";
 import BowserActionHandler from "./BowserActionHandler";
 
-export default function PhaseOne({resetFight, handleNextTurn}: any) {
+export default function PhaseOne({resetFight, handleNextTurn, startInPhase2, setStartInPhase2}: any) {
     const {fightData} = useContext(FightContext);
 
     return (
@@ -40,6 +40,8 @@ export default function PhaseOne({resetFight, handleNextTurn}: any) {
                                     }}> {fightData.turn === 0 ? "Start Fight" : "Next Turn"} </Button>
                         </Group>
                     </Center>
+                    <Switch label="Start in Phase 2" checked={startInPhase2} disabled={fightData.turn !== 0}
+                            onChange={(event) => setStartInPhase2(event.currentTarget.checked)}/>
                 </Stack>
             </Grid.Col>
             <Grid.Col md="auto" span="auto">

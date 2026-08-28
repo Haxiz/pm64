@@ -196,6 +196,11 @@ export default function FightTabs() {
     const {classes} = pageStyles();
     const {fightData, setFightData} = useContext(FightContext);
     const [activeTab, setActiveTab] = useState<string | null>("first");
+    // Pre-fight preference only — not part of fightData, since it doesn't
+    // feed the prediction engine outside the "Start Fight" branch below and
+    // has no reason to reset along with the rest of the fight state.
+    // Defaults on, since Phase 2 is the far more common thing to calculate.
+    const [startInPhase2, setStartInPhase2] = useState(true);
 
     // ── Reset ──────────────────────────────────────────────────────────
     /** Resets all fight state back to initial values. */
@@ -289,7 +294,34 @@ export default function FightTabs() {
      *                  final_bowser_1.c:675 for Phase 1).
      */
     function handleNextTurn() {
-        if (fightData.turn === 0 && fightData.phase === 1) {
+        if (fightData.turn === 0 && fightData.phase === 1 && startInPhase2) {
+            // Skip straight to Phase 2's turn 1, using the same init values
+            // and mid-fight restoration the normal turn-3 transition applies
+            // below (see § Phase Transition in Logic.md) — Mario's HP/FP
+            // fully restored, Bowser left shielded from the Phase 1 Star
+            // Rod cast that always precedes Phase 2 in a real fight.
+            let bowser = {
+                ...fightData.Bowser,
+                shield: true,
+                turnsInfo: {
+                    turnsSinceShockwave: 1,
+                    turnsSinceClaw: 3,
+                    turnsSinceStomp: 3,
+                    turnsSinceShield: 1,
+                    turnsSinceHeal: 1,
+                },
+            };
+            let mario = {...fightData.Mario, hp: fightData.Mario.maxHP, fp: fightData.Mario.maxFP};
+            let predictions = handlePredictions(1, 2, mario, bowser, fightData.Partner);
+            setActiveTab("second");
+            setFightData({
+                ...fightData,
+                turn: 1,
+                phase: 2,
+                Mario: mario,
+                Bowser: {...bowser, actionChances: predictions},
+            });
+        } else if (fightData.turn === 0 && fightData.phase === 1) {
             let predictions = handlePredictions(1, fightData.phase, fightData.Mario, fightData.Bowser, fightData.Partner);
             setFightData({
                 ...fightData,
@@ -500,7 +532,8 @@ export default function FightTabs() {
                         Post Twink</Tabs.Tab>
                 </Tabs.List>
                 <Tabs.Panel value="first">
-                    <PhaseOne resetFight={resetFight} handleNextTurn={handleNextTurn}/>
+                    <PhaseOne resetFight={resetFight} handleNextTurn={handleNextTurn}
+                              startInPhase2={startInPhase2} setStartInPhase2={setStartInPhase2}/>
                 </Tabs.Panel>
                 <Tabs.Panel value="second">
                     <PhaseTwo resetFight={resetFight} handleNextTurn={handleNextTurn}/>

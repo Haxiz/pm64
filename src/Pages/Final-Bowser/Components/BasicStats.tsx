@@ -1,8 +1,8 @@
-import {Box, Group, Image, Indicator, Stack, Text} from "@mantine/core";
+import {Box, Group, Image, Indicator, Stack, Switch, Text} from "@mantine/core";
 import MarioSprite from "../../../Assets/Sprites/mario.png";
 import MarioSpriteTired from "../../../Assets/Sprites/mario-tired.png";
 import MarioSpriteDead from "../../../Assets/Sprites/mario-dead.png";
-import React, {useContext} from "react";
+import React, {useContext, useEffect, useState} from "react";
 import {FightContext} from "../FinalBowser";
 import pageStyles from "../../../Styles/page.styles";
 import getBootIcon from "../../../Services/Actions/boot.actions";
@@ -13,10 +13,31 @@ import danger from "../../../Assets/Icons/danger.png";
 import peril from "../../../Assets/Icons/peril.png";
 import bootBoost from "../../../Assets/Icons/boot-boost.png";
 import wattBoost from "../../../Assets/Icons/watt-boost.png";
+import {isSaveLoadoutEnabled, saveLoadout, setSaveLoadoutEnabled} from "../../../Services/Utils/loadout.util";
 
 export default function BasicStats() {
     const {classes} = pageStyles();
     const {fightData, setFightData} = useContext(FightContext);
+    const [saveLoadoutOn, setSaveLoadoutOn] = useState(isSaveLoadoutEnabled);
+
+    // Auto-save Mario's loadout (max HP/FP + equipment) whenever it changes
+    // while the toggle is on. Turning the toggle on saves immediately;
+    // turning it off just stops future saves, leaving the last save intact.
+    useEffect(() => {
+        if (saveLoadoutOn) {
+            saveLoadout({
+                maxHP: fightData.Mario.maxHP,
+                maxFP: fightData.Mario.maxFP,
+                boots: fightData.Mario.boots,
+                hammer: fightData.Mario.hammer,
+            });
+        }
+    }, [saveLoadoutOn, fightData.Mario.maxHP, fightData.Mario.maxFP, fightData.Mario.boots, fightData.Mario.hammer]);
+
+    function handleToggleSaveLoadout(enabled: boolean) {
+        setSaveLoadoutOn(enabled);
+        setSaveLoadoutEnabled(enabled);
+    }
 
     function handleBootCycle() {
         if (fightData.turn === 0) {
@@ -82,6 +103,10 @@ export default function BasicStats() {
                 <Group position="center">
                     <MarioHPHandler/>
                     <MarioFPHandler/>
+                </Group>
+                <Group position="center">
+                    <Switch label="Remember Loadout" checked={saveLoadoutOn}
+                            onChange={(event) => handleToggleSaveLoadout(event.currentTarget.checked)}/>
                 </Group>
             </Stack>
         </Box>

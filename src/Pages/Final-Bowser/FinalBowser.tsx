@@ -9,6 +9,7 @@ import BowserI from "../../Types/bowser.types";
 import BasicStats from "./Components/BasicStats";
 import PartnerI from "../../Types/partner.types";
 import FightTabs from "./Components/FightTabs";
+import {isSaveLoadoutEnabled, loadSavedLoadout} from "../../Services/Utils/loadout.util";
 
 interface FightDataI {
     Mario: MarioI,
@@ -26,15 +27,29 @@ interface FightContextI {
 
 export const FightContext = React.createContext<FightContextI>({} as FightContextI);
 
-export default function FinalBowser() {
-    const [fightData, setFightData] = useState<FightDataI>({
+/**
+ * Mario's default loadout, used when no saved loadout applies. Extracted so
+ * `buildInitialFightData` can fall back to it explicitly.
+ */
+const DEFAULT_MARIO_LOADOUT = {maxHP: 10, maxFP: 10, boots: "Ultra Boots", hammer: "Ultra Hammer"};
+
+/**
+ * Builds the initial fightData, applying the saved loadout (if the
+ * "Remember Loadout" toggle was left on and a save exists) in place of the
+ * hardcoded defaults. Current HP/FP start equal to max, same as the
+ * pre-existing default shape.
+ */
+function buildInitialFightData(): FightDataI {
+    const loadout = isSaveLoadoutEnabled() ? loadSavedLoadout() ?? DEFAULT_MARIO_LOADOUT : DEFAULT_MARIO_LOADOUT;
+
+    return {
         Mario: {
-            maxHP: 10,
-            hp: 10,
-            maxFP: 10,
-            fp: 10,
-            hammer: "Ultra Hammer",
-            boots: "Ultra Boots",
+            maxHP: loadout.maxHP,
+            hp: loadout.maxHP,
+            maxFP: loadout.maxFP,
+            fp: loadout.maxFP,
+            hammer: loadout.hammer,
+            boots: loadout.boots,
             badges: [],
             items: [],
             buffed: false,
@@ -72,7 +87,11 @@ export default function FinalBowser() {
         turn: 0,
         first: "Mario",
         phase: 1,
-    })
+    };
+}
+
+export default function FinalBowser() {
+    const [fightData, setFightData] = useState<FightDataI>(buildInitialFightData);
 
     const fightContext = {
         fightData,
