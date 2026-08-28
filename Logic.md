@@ -4,6 +4,13 @@ This document describes how the calculator in `FightTabs.tsx` maps to the
 original game scripts in `src/Logic/final_bowser_1.c` (Phase 1) and
 `src/Logic/final_bowser_2.c` (Phase 2).
 
+> **Verified against the game scripts (2026-08-28):** four concrete bugs
+> were found with a reference-model test suite and have since been fixed —
+> see [§11](#11-verified-discrepancies-audit) for what they were and how
+> they were confirmed. The suite (`FightTabs.logic.test.ts`) is now part of
+> the regression net; sections 5 and 7 below describe the calculator's
+> current (correct) behavior.
+
 ---
 
 ## Table of Contents
@@ -21,6 +28,7 @@ original game scripts in `src/Logic/final_bowser_1.c` (Phase 1) and
 8. [Regular Attack Pool (EVS_UseAttack)](#8-regular-attack-pool-evs_useattack)
 9. [Phase Transition](#9-phase-transition)
 10. [Known Differences / Limitations](#10-known-differences--limitations)
+11. [Verified Discrepancies (Audit)](#11-verified-discrepancies-audit)
 
 ---
 
@@ -232,13 +240,13 @@ percentage math.
 
 The game has two nested probability gates:
 
-1. **75% gate + partner charges** (lines 1020–1030):
+1. **75% gate + Mario's jump/hammer charge** (lines 1020–1030):
    ```
-   RandInt(100) < 75 → check partner jump/hammer charges
-       if any charge > 0 → shockwave (early return)
+   RandInt(100) < 75 → GetJumpHammerCharge (Mario's jump/hammer charge)
+       if either charge > 0 → shockwave (early return)
    ```
    This gate only produces shockwave (never thunder). If the 75% roll
-   fails or the partner has no charges, execution falls through.
+   fails or Mario has no charge, execution falls through.
 
 2. **~27% gate** (lines 1032–1040):
    ```
@@ -251,18 +259,32 @@ The game has two nested probability gates:
 
 **Calculator:** `else` branch
 
-The calculator does not track partner charges, so the 75% gate cannot be
-accurately modeled. Instead, the else branch approximates the combined
-effect:
+The calculator **does** track Mario's charge. `GetJumpHammerCharge`
+(Mario's jump/hammer charge) is represented by `mario.buffed` (Mario
+boosting himself) or `partner.buffTurns > 0` (a partner boosting Mario).
+When charged, the 75% gate fires: 75% of the pool is taken as shockwave,
+and the remaining 25% still passes through the ~27% gate below. When
+*not* charged, the whole pool passes through the ~27% gate.
 
 ```
-shockwave = floor(66% × 27%) of pool  ≈ 18%
-thunder   = floor(34% × 27%) of pool  ≈ 9%
-remaining → regular attack pool (stomp / claw / fire)
+if (mario.buffed || partner.buffTurns > 0):
+    shockwave += 75% of pool        // 75% gate
+    remaining  = 25% of pool
+else:
+    remaining  = 100% of pool
+shockwave += floor(66% × 27%) of remaining  ≈ 18% of remaining
+thunder   += floor(34% × 27%) of remaining  ≈ 9%  of remaining
+rest       → regular attack pool (stomp / claw / fire)
 ```
 
-This produces thunder probabilities that were previously missing when the
-calculator incorrectly routed this path through a `mario.buffed` check.
+Worked example (Mario charged, full 100% pool):
+- `shockwave = 75` (75% gate), `remaining = 25`
+- `shockwave += floor(66 × 27 / 100) × 25 / 100 = 4` → `79`
+- `thunder = floor(34 × 27 / 100) × 21 / 100 = 1`
+- result: **shockwave ≈ 79%**, thunder ≈ 1%, rest regular
+
+This matches the game's combined probability (75% + 25% × 18.2% ≈ 79.5%
+shockwave), within integer-rounding error.
 
 ---
 
@@ -321,10 +343,15 @@ Mario's HP and FP are also fully restored at the transition.
 
 ## 10. Known Differences / Limitations
 
-1. **Partner charges not tracked.** The game's75% gate in `EVS_UseAttackOrShockwave`
-   checks `GetJumpHammerCharge` (partner's jump/hammer star power charges).
-   The calculator cannot model this and folds it into the general ~27%
-   shockwave/thunder path.
+1. **Mario's jump/hammer charge is tracked.** The game's 75% gate in
+   `EVS_UseAttackOrShockwave` checks `GetJumpHammerCharge` — **Mario's**
+   jump/hammer charge (not the partner's). The calculator models this via
+   `mario.buffed` (Mario boosting himself) and `partner.buffTurns > 0`
+   (a partner boosting Mario). When charged, the 75% gate takes 75% of the
+   pool as shockwave and the remaining 25% still passes through the ~27%
+   gate, giving ≈ 79% shockwave total — matching the game (75% +
+   25% × 18.2% ≈ 79.5%) within integer-rounding error. The only residual
+   inaccuracy is rounding (see item 2).
 
 2. **Rounding.** The calculator uses integer `Math.floor` at each step.
    Small probability pools (e.g. after heal + shield deductions) may cause
@@ -343,3 +370,132 @@ Mario's HP and FP are also fully restored at the transition.
    `setFightData` is called with a new top-level spread, triggering a
    React re-render. However, the mutated objects are the same references,
    which could cause issues if React batches or retries the update.
+
+---
+
+## 11. Verified Discrepancies (Audit) — all fixed 2026-08-28
+
+**Method:** `src/Logic/finalBowserReference.ts` is a direct TypeScript port
+of the decision-only logic in `EVS_TakeTurn_Inner`, `EVS_UseAttackOrShockwave`,
+and `EVS_UseAttack` (both phases) — no hand-typed percentages. Every
+`RandInt` call is explored exhaustively (`enumerateOutcomes`) to get the
+exact set of actions the game can reach from a given counter state.
+`src/Pages/Final-Bowser/Components/__tests__/FightTabs.logic.test.ts` drives
+both this reference model and the calculator's real `handlePredictions`
+through matching turn states and asserts the same actions are reachable
+(plus one test, §11.4, that compares exact probabilities directly since
+that bug doesn't change *reachability*, only the split between two already-
+reachable actions). Run it with `npm test -- FightTabs.logic`.
+
+The four bugs below were found this way, then fixed in `FightTabs.tsx`; the
+suite is now fully green (20/20) and stands as the permanent regression net
+for this class of bug. Unlike §10's items (which are intentional, low-impact
+simplifications), these were unintended and changed what the calculator
+predicted Bowser would do.
+
+### 11.1 Heal ("recover") counter reset was missing the +1 offset — fixed
+
+`FightTabs.tsx`, `handleNextTurn`, `case "heal":` set
+`bowser.turnsInfo.turnsSinceHeal = 0`. Every other counter that uses the
+"calculator value == game value" convention (§2) — i.e. checked against the
+game's own unshifted threshold — needs its *reset* value offset by +1 to
+stay in that convention, the same way the phase-transition init and the
+shield/beam reset already do. This reset didn't, so it desynced from the
+very next heal check onward:
+
+| Rounds since heal | Game (`AVAR_TurnsSinceRecover`, `IfGt(x,1)`) | Calculator (`turnsSinceHeal`, `> 1`), before the fix |
+|---|---|---|
+| 1 | 1 → not eligible | 0 → not eligible (agrees) |
+| 2 | 2 → **eligible** | 1 → not eligible (**wrong**) |
+| 3 | 3 → eligible | 2 → eligible (calculator caught up, one round late) |
+
+**Effect:** for one full round after Bowser's heal cooldown should reopen,
+the calculator showed 0% heal chance when the game already had heal back in
+its pool (subject to the HP-gap and 75% roll). **Fix applied:** the reset
+now sets `bowser.turnsInfo.turnsSinceHeal = 1`.
+
+### 11.2 Shockwave counter reset was missing the same +1 offset — fixed
+
+Same bug, same cause, different counter. `case "shockwave":` set
+`bowser.turnsInfo.turnsSinceShockwave = 0`, but the `< 3` cooldown check
+downstream (§7) uses the game's own unshifted threshold and needs the +1
+convention to match:
+
+| Rounds since shockwave | Game (`TurnsSinceShockwave`, `< 3`) | Calculator (`turnsSinceShockwave`, `< 3`), before the fix |
+|---|---|---|
+| 2 | 2 → still on cooldown | 1 → still on cooldown (agrees) |
+| 3 | 3 → **cooldown over, shockwave logic runs** | 2 → still on cooldown (**wrong**) |
+| 4 | 4 → cooldown over | 3 → cooldown over (calculator caught up, one round late) |
+
+**Effect:** for one round after Bowser should become shockwave/thunder-eligible
+again, the calculator still showed regular-attacks-only. **Fix applied:** the
+reset now sets `bowser.turnsInfo.turnsSinceShockwave = 1`.
+
+### 11.3 Heal HP-gap boundary used `>=` where the game uses strict `>` — fixed
+
+`handlePredictions` used `if (marioHPPercent - bowserHPPercent >= 25)`. The
+game (`final_bowser_2.c:948`) is `IfGt(gap, 25)` — strictly greater, i.e. the
+gap must be 26 or more. At exactly a 25-point gap the calculator offered a
+heal chance the game cannot produce. **Effect:** narrow (one percentage
+point of HP-gap) but real; matters more with a small `maxHP`. **Fix
+applied:** the comparison is now `> 25`.
+
+### 11.4 Path 3's ~27% gate split shockwave and thunder against different pools — fixed
+
+`handlePredictions`, Path 3 (general case), used to read:
+
+```js
+predictions.shockwave += handlePercentage(handlePercentage(66, 27), totalPredictionPercent);
+totalPredictionPercent -= handlePercentage(handlePercentage(66, 27), totalPredictionPercent);
+predictions.thunder = handlePercentage(handlePercentage(34, 27), totalPredictionPercent);
+```
+
+The ~27% gate (`RandInt(110) < 30`, then `< 20` = shockwave vs `>= 20` = thunder,
+`final_bowser_2.c:1032-1041`) is meant to split the *same* remaining pool
+66%/34% between shockwave and thunder (approximating the game's 20/30 and
+10/30 split of that gate). But the second line subtracted shockwave's share
+from `totalPredictionPercent` *before* the third line computed thunder's
+share — so thunder ended up computed against a pool that had already been
+shrunk by shockwave's cut, not the pool as it stood when the gate was
+entered.
+
+**Worked example** (Mario charged, full 100% pool, matches the fight
+sequence: Phase 2, boost → skip → stomp, boost → skip → fire, skip → skip
+→ stomp, then predicting turns 4–5):
+
+| | shockwave | thunder |
+|---|---|---|
+| Calculator's output before this fix | 79% | **1%** |
+| Exact game probability (0.75 + 0.25×20/110, 0.25×10/110) | 79.55% | **2.27%** |
+| Calculator's output after this fix (same 66/27, 34/27 approximation, correct shared pool) | 79% | **2%** |
+
+**Effect:** thunder was under-reported by roughly half in Path 3 whenever
+Mario/a partner is charged (the common case once shockwave's cooldown
+clears and Mario keeps boosting) — confirmed with the reference model in
+`FightTabs.logic.test.ts` ("Path 3 (charged, general case): thunder %
+matches the exact game probability"). Shockwave's own number was already
+fine, since it was computed before the pool was mutated. **Fix applied:**
+the gate's shockwave and thunder shares are now computed against the same
+pool snapshot:
+
+```js
+const gate2Base = totalPredictionPercent; // pool as of entering the ~27% gate
+const gate2Shockwave = handlePercentage(handlePercentage(66, 27), gate2Base);
+const gate2Thunder = handlePercentage(handlePercentage(34, 27), gate2Base);
+predictions.shockwave += gate2Shockwave;
+predictions.thunder = gate2Thunder;
+totalPredictionPercent -= gate2Shockwave + gate2Thunder;
+```
+
+### Not a bug (checked, kept for the record)
+
+Bowser's own `case "shield":` resets `turnsSinceShield = 0` on cast. The
+game's `EVS_StarRodCast` never touches `AVAR_TurnsSinceStarBeam` at all —
+only removing the enchant (beam) resets it, which the calculator does
+correctly (`case "beam":` sets it to `1`, and the generic per-round
+increment that follows brings it to the same value the game reaches by
+incrementing once at cast and once more the following round). Since the
+shield-eligibility check is separately guarded by "not currently enchanted"
+in both the game and the calculator, resetting the counter on cast has no
+observable effect on predictions. Confirmed via the "already shielded"
+case in the test suite.

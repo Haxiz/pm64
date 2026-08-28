@@ -12,6 +12,175 @@ import BowserActionsI from "../../../Types/bowserActions.types";
 import successNotification from "../../../Services/Utils/Notifications/success.util";
 import MarioI from "../../../Types/mario.type";
 import BowserI from "../../../Types/bowser.types";
+import PartnerI from "../../../Types/partner.types";
+
+/** Returns floor(partialValue * totalValue / 100). */
+export function handlePercentage(partialValue: number, totalValue: number) {
+    return Math.floor((partialValue * totalValue) / 100);
+}
+
+/**
+ * Calculates the probability distribution for Bowser's next action.
+ *
+ * Phase 1 is fully scripted (turn 1 = attack, turn 2 = shield).
+ * Phase 2 mirrors EVS_TakeTurn_Inner in final_bowser_1.c / final_bowser_2.c.
+ *
+ * NOTE: Counter checks use > 0 instead of the game's >= 2 because the
+ * calculator increments counters at the END of the previous turn, while
+ * the game increments at the START of each turn (before checks). This
+ * means the calculator's counter values are always one less than the
+ * game's values at the point of the check. See Logic.md § Counter
+ * Timing for details.
+ *
+ * Extracted to module scope (out of the FightTabs component) so it can be
+ * unit-tested directly against the reference model in
+ * `src/Logic/__tests__/finalBowserReference.ts` — see
+ * `FightTabs.logic.test.ts`. Pure function, no behavior change from the
+ * original in-component version.
+ */
+export function handlePredictions(turn: number, phase: number, mario: MarioI, bowser: BowserI, partner: PartnerI) {
+    let totalPredictionPercent = 100;
+    let predictions: BowserActionsI = {
+        shield: 0,
+        fire: 0,
+        claw: 0,
+        buttstomp: 0,
+        heal: 0,
+        thunder: 0,
+        shockwave: 0,
+    }
+    if (phase === 1) {
+        if (turn === 1) {
+            //Selecting normal move
+            //Stomp has 25% chance of being selected
+            predictions.buttstomp = handlePercentage(25, totalPredictionPercent);
+            totalPredictionPercent -= predictions.buttstomp;
+            //Claw has a 33% chance of being selected
+            predictions.claw = handlePercentage(33, totalPredictionPercent);
+            totalPredictionPercent -= predictions.claw;
+            //Fire takes the rest
+            predictions.fire = totalPredictionPercent;
+        } else if (turn === 2) {
+            //Shield is guaranteed in this turn, moving the fight along to phase two
+            predictions.shield = 100;
+            predictions.buttstomp = 0;
+            predictions.claw = 0;
+            predictions.fire = 0;
+        }
+    } else {
+        // ── Phase 2: heal check ────────────────────────────────────
+        // Game: EVS_TakeTurn_Inner lines 948–968 (final_bowser_2.c)
+        // Condition: Mario HP% − Bowser HP% > 25 AND TurnsSinceRecover > 1
+        //            AND RecoversLeft ≠ 0 AND RandInt(100) < 75
+        // Calculator: maps TurnsSinceRecover → turnsSinceHeal (> 1)
+        let marioHPPercent = mario.hp / mario.maxHP * 100;
+        let bowserHPPercent = bowser.hp / bowser.maxHP * 100;
+        if (marioHPPercent - bowserHPPercent > 25) {
+            if (bowser.heals < 3 && bowser.turnsInfo.turnsSinceHeal > 1) {
+                predictions.heal = handlePercentage(75, totalPredictionPercent);
+                totalPredictionPercent -= predictions.heal;
+            }
+        }
+        // ── Phase 2: shield check ──────────────────────────────────
+        // Game: EVS_TakeTurn_Inner lines 969–989 (final_bowser_2.c)
+        // Condition: TurnCount > 1 AND not enchanted AND TurnsSinceStarBeam
+        //            determines the re-enchant chance (0%/15%/75%).
+        // Calculator: maps TurnsSinceStarBeam → turnsSinceShield (> 1).
+        // The `!bowser.shield` guard ensures Bowser won't re-shield when
+        // already enchanted (matches the game's ACTOR_EVENT_FLAG check).
+        if ((bowser.turnsInfo.turnsSinceShield > 1) && !bowser.shield) {
+            if (bowser.turnsInfo.turnsSinceShield === 3) {
+                predictions.shield = handlePercentage(15, totalPredictionPercent);
+                totalPredictionPercent -= predictions.shield;
+            } else if (bowser.turnsInfo.turnsSinceShield > 3) {
+                predictions.shield = handlePercentage(75, totalPredictionPercent);
+                totalPredictionPercent -= predictions.shield;
+            }
+        }
+        // ── Phase 2: attack selection (mutually exclusive paths) ───
+        // Game: EVS_TakeTurn_Inner lines 991–997 → EVS_UseAttackOrShockwave
+        //       (final_bowser_2.c lines 1001–1047)
+        //
+        // Path 1: TurnsSinceShockwave < 3 OR TurnCount ≤ 3
+        //         → EVS_UseAttack (regular attacks only, no shockwave)
+        //
+        // Path 2: TurnsSinceShockwave ≥ 6
+        //         → Forced shockwave/thunder (RandInt(30): 20/30 shockwave,
+        //           10/30 thunder)
+        //
+        // Path 3: General case (3 ≤ TurnsSinceShockwave < 6, TurnCount > 3)
+        //         → 75% gate: check GetJumpHammerCharge (Mario's jump/hammer
+        //           charge) → shockwave if any charge exists. The calculator
+        //           tracks this via `mario.buffed` (Mario boosting himself)
+        //           or `partner.buffTurns > 0` (a partner boosting Mario).
+        //           If the gate fires, shockwave is taken; otherwise it falls
+        //           through.
+        //         → ~27% gate: RandInt(110) < 30 → shockwave (20/30) or
+        //           thunder (10/30). This applies to the REMAINING pool after
+        //           the 75% gate (i.e. the 25% the gate did not consume).
+        //         → Fallback: EVS_UseAttack (regular attacks).
+        if (bowser.turnsInfo.turnsSinceShockwave < 3 || turn <= 3) {
+            // Regular attacks only (early turns or post-shockwave cooldown)
+            if (totalPredictionPercent > 0) {
+                if (bowser.turnsInfo.turnsSinceStomp > 0) {
+                    predictions.buttstomp = handlePercentage(25, totalPredictionPercent);
+                    totalPredictionPercent -= predictions.buttstomp;
+                }
+                if (bowser.turnsInfo.turnsSinceClaw > 0) {
+                    predictions.claw = handlePercentage(33, totalPredictionPercent);
+                    totalPredictionPercent -= predictions.claw;
+                }
+                predictions.fire = totalPredictionPercent;
+                totalPredictionPercent = 0;
+            }
+        } else if (bowser.turnsInfo.turnsSinceShockwave >= 6) {
+            // Shockwave forced after long cooldown
+            if (totalPredictionPercent > 0) {
+                predictions.shockwave = handlePercentage(66, totalPredictionPercent);
+                totalPredictionPercent -= predictions.shockwave;
+                predictions.thunder = totalPredictionPercent;
+                totalPredictionPercent = 0;
+            }
+        } else {
+            // Path 3 general case.
+            // Game: 75% gate (final_bowser_2.c:1019-1030) checks
+            // GetJumpHammerCharge (Mario's jump/hammer charge). If Mario is
+            // charged — by boosting himself or via a partner boost — the gate
+            // fires 75% of the time → shockwave. The remaining 25% still
+            // passes through the ~27% gate below.
+            if (totalPredictionPercent > 0) {
+                const marioCharged = mario.buffed || partner.buffTurns > 0;
+                if (marioCharged) {
+                    predictions.shockwave = handlePercentage(75, totalPredictionPercent);
+                    totalPredictionPercent -= predictions.shockwave;
+                }
+                // ~27% gate (final_bowser_2.c:1032-1043) on the remaining pool.
+                // Both shares are computed against the SAME pre-gate pool
+                // snapshot (gate2Base) — computing thunder against a pool
+                // already shrunk by shockwave's share was a bug (see
+                // Logic.md §11.4).
+                const gate2Base = totalPredictionPercent;
+                const gate2Shockwave = handlePercentage(handlePercentage(66, 27), gate2Base);
+                const gate2Thunder = handlePercentage(handlePercentage(34, 27), gate2Base);
+                predictions.shockwave += gate2Shockwave;
+                predictions.thunder = gate2Thunder;
+                totalPredictionPercent -= gate2Shockwave + gate2Thunder;
+                // Remaining pool goes to normal moves
+                if (bowser.turnsInfo.turnsSinceStomp > 0) {
+                    predictions.buttstomp = handlePercentage(25, totalPredictionPercent);
+                    totalPredictionPercent -= predictions.buttstomp;
+                }
+                if (bowser.turnsInfo.turnsSinceClaw > 0) {
+                    predictions.claw = handlePercentage(33, totalPredictionPercent);
+                    totalPredictionPercent -= predictions.claw;
+                }
+                predictions.fire = totalPredictionPercent;
+                totalPredictionPercent = 0;
+            }
+        }
+    }
+    return predictions;
+}
 
 /**
  * FightTabs — Core Bowser fight calculator.
@@ -107,153 +276,6 @@ export default function FightTabs() {
         return error;
     }
 
-    // ── Prediction engine ──────────────────────────────────────────────
-    /**
-     * Calculates the probability distribution for Bowser's next action.
-     *
-     * Phase 1 is fully scripted (turn 1 = attack, turn 2 = shield).
-     * Phase 2 mirrors EVS_TakeTurn_Inner in final_bowser_1.c / final_bowser_2.c.
-     *
-     * NOTE: Counter checks use > 0 instead of the game's >= 2 because the
-     * calculator increments counters at the END of the previous turn, while
-     * the game increments at the START of each turn (before checks). This
-     * means the calculator's counter values are always one less than the
-     * game's values at the point of the check. See Logic.md § Counter
-     * Timing for details.
-     */
-    function handlePredictions(turn: number, phase: number, mario: MarioI, bowser: BowserI) {
-        let totalPredictionPercent = 100;
-        let predictions: BowserActionsI = {
-            shield: 0,
-            fire: 0,
-            claw: 0,
-            buttstomp: 0,
-            heal: 0,
-            thunder: 0,
-            shockwave: 0,
-        }
-        if (phase === 1) {
-            if (turn === 1) {
-                //Selecting normal move
-                //Stomp has 25% chance of being selected
-                predictions.buttstomp = handlePercentage(25, totalPredictionPercent);
-                totalPredictionPercent -= predictions.buttstomp;
-                //Claw has a 33% chance of being selected
-                predictions.claw = handlePercentage(33, totalPredictionPercent);
-                totalPredictionPercent -= predictions.claw;
-                //Fire takes the rest
-                predictions.fire = totalPredictionPercent;
-            } else if (turn === 2) {
-                //Shield is guaranteed in this turn, moving the fight along to phase two
-                predictions.shield = 100;
-                predictions.buttstomp = 0;
-                predictions.claw = 0;
-                predictions.fire = 0;
-            }
-        } else {
-            // ── Phase 2: heal check ────────────────────────────────────
-            // Game: EVS_TakeTurn_Inner lines 948–968 (final_bowser_2.c)
-            // Condition: Mario HP% − Bowser HP% > 25 AND TurnsSinceRecover > 1
-            //            AND RecoversLeft ≠ 0 AND RandInt(100) < 75
-            // Calculator: maps TurnsSinceRecover → turnsSinceHeal (> 1)
-            let marioHPPercent = mario.hp / mario.maxHP * 100;
-            let bowserHPPercent = bowser.hp / bowser.maxHP * 100;
-            if (marioHPPercent - bowserHPPercent >= 25) {
-                if (bowser.heals < 3 && bowser.turnsInfo.turnsSinceHeal > 1) {
-                    predictions.heal = handlePercentage(75, totalPredictionPercent);
-                    totalPredictionPercent -= predictions.heal;
-                }
-            }
-            // ── Phase 2: shield check ──────────────────────────────────
-            // Game: EVS_TakeTurn_Inner lines 969–989 (final_bowser_2.c)
-            // Condition: TurnCount > 1 AND not enchanted AND TurnsSinceStarBeam
-            //            determines the re-enchant chance (0%/15%/75%).
-            // Calculator: maps TurnsSinceStarBeam → turnsSinceShield (> 1).
-            // The `!bowser.shield` guard ensures Bowser won't re-shield when
-            // already enchanted (matches the game's ACTOR_EVENT_FLAG check).
-            if ((bowser.turnsInfo.turnsSinceShield > 1) && !bowser.shield) {
-                if (bowser.turnsInfo.turnsSinceShield === 3) {
-                    predictions.shield = handlePercentage(15, totalPredictionPercent);
-                    totalPredictionPercent -= predictions.shield;
-                } else if (bowser.turnsInfo.turnsSinceShield > 3) {
-                    predictions.shield = handlePercentage(75, totalPredictionPercent);
-                    totalPredictionPercent -= predictions.shield;
-                }
-            }
-            // ── Phase 2: attack selection (mutually exclusive paths) ───
-            // Game: EVS_TakeTurn_Inner lines 991–997 → EVS_UseAttackOrShockwave
-            //       (final_bowser_2.c lines 1001–1047)
-            //
-            // Path 1: TurnsSinceShockwave < 3 OR TurnCount ≤ 3
-            //         → EVS_UseAttack (regular attacks only, no shockwave)
-            //
-            // Path 2: TurnsSinceShockwave ≥ 6
-            //         → Forced shockwave/thunder (RandInt(30): 20/30 shockwave,
-            //           10/30 thunder)
-            //
-            // Path 3: General case (3 ≤ TurnsSinceShockwave < 6, TurnCount > 3)
-            //         → 75% gate: check partner jump/hammer charges → shockwave
-            //           if any charge exists (game: GetJumpHammerCharge).
-            //           If gate fails or no charges → fall through.
-            //         → ~27% gate: RandInt(110) < 30 → shockwave (20/30) or
-            //           thunder (10/30).
-            //         → Fallback: EVS_UseAttack (regular attacks).
-            //
-            // The calculator collapses paths 3's75% gate into the else branch
-            // since partner charges are not tracked; thunder is always possible
-            // in this range.
-            if (bowser.turnsInfo.turnsSinceShockwave < 3 || turn <= 3) {
-                // Regular attacks only (early turns or post-shockwave cooldown)
-                if (totalPredictionPercent > 0) {
-                    if (bowser.turnsInfo.turnsSinceStomp > 0) {
-                        predictions.buttstomp = handlePercentage(25, totalPredictionPercent);
-                        totalPredictionPercent -= predictions.buttstomp;
-                    }
-                    if (bowser.turnsInfo.turnsSinceClaw > 0) {
-                        predictions.claw = handlePercentage(33, totalPredictionPercent);
-                        totalPredictionPercent -= predictions.claw;
-                    }
-                    predictions.fire = totalPredictionPercent;
-                    totalPredictionPercent = 0;
-                }
-            } else if (bowser.turnsInfo.turnsSinceShockwave >= 6) {
-                // Shockwave forced after long cooldown
-                if (totalPredictionPercent > 0) {
-                    predictions.shockwave = handlePercentage(66, totalPredictionPercent);
-                    totalPredictionPercent -= predictions.shockwave;
-                    predictions.thunder = totalPredictionPercent;
-                    totalPredictionPercent = 0;
-                }
-            } else {
-                // Random shockwave/thunder check (~27% of pool)
-                if (totalPredictionPercent > 0) {
-                    predictions.shockwave = handlePercentage(handlePercentage(66, 27), totalPredictionPercent);
-                    totalPredictionPercent -= predictions.shockwave;
-                    predictions.thunder = handlePercentage(handlePercentage(34, 27), totalPredictionPercent);
-                    totalPredictionPercent -= predictions.thunder;
-                    // Remaining pool goes to normal moves
-                    if (bowser.turnsInfo.turnsSinceStomp > 0) {
-                        predictions.buttstomp = handlePercentage(25, totalPredictionPercent);
-                        totalPredictionPercent -= predictions.buttstomp;
-                    }
-                    if (bowser.turnsInfo.turnsSinceClaw > 0) {
-                        predictions.claw = handlePercentage(33, totalPredictionPercent);
-                        totalPredictionPercent -= predictions.claw;
-                    }
-                    predictions.fire = totalPredictionPercent;
-                    totalPredictionPercent = 0;
-                }
-            }
-        }
-        return predictions;
-    }
-
-    // ── Utility ────────────────────────────────────────────────────────
-    /** Returns floor(partialValue * totalValue / 100). */
-    function handlePercentage(partialValue: number, totalValue: number) {
-        return Math.floor((partialValue * totalValue) / 100);
-    }
-
     // ── Turn advancement ───────────────────────────────────────────────
     /**
      * Processes the current turn and advances to the next one.
@@ -268,7 +290,7 @@ export default function FightTabs() {
      */
     function handleNextTurn() {
         if (fightData.turn === 0 && fightData.phase === 1) {
-            let predictions = handlePredictions(1, fightData.phase, fightData.Mario, fightData.Bowser);
+            let predictions = handlePredictions(1, fightData.phase, fightData.Mario, fightData.Bowser, fightData.Partner);
             setFightData({
                 ...fightData,
                 turn: 1,
@@ -362,13 +384,18 @@ export default function FightTabs() {
                         bowser.heals++;
                         bowser.hp += 30;
                     }
-                    bowser.turnsInfo.turnsSinceHeal = 0;
+                    // Reset carries the same +1 offset as the phase-init and
+                    // shield/beam resets (see Logic.md §11.1) — resetting to
+                    // 0 desynced the heal-eligibility window from the game's
+                    // by one round.
+                    bowser.turnsInfo.turnsSinceHeal = 1;
                     break;
                 case "buttstomp":
                     bowser.turnsInfo.turnsSinceStomp = 0;
                     break;
                 case "shockwave":
-                    bowser.turnsInfo.turnsSinceShockwave = 0;
+                    // Same +1-offset fix as turnsSinceHeal above (Logic.md §11.2).
+                    bowser.turnsInfo.turnsSinceShockwave = 1;
                     break;
             }
 
@@ -418,7 +445,7 @@ export default function FightTabs() {
             }
 
             // ── Generate next-turn prediction ──────────────────────────
-            bowser.actionChances = handlePredictions(turn, phase, mario, bowser);
+            bowser.actionChances = handlePredictions(turn, phase, mario, bowser, partner);
 
             setFightData({
                 ...fightData,
@@ -439,7 +466,7 @@ export default function FightTabs() {
         let phase = fightData.phase;
         let mario = fightData.Mario;
         let bowser = fightData.Bowser;
-        bowser.actionChances = handlePredictions(turn, phase, mario, bowser);
+        bowser.actionChances = handlePredictions(turn, phase, mario, bowser, fightData.Partner);
         setFightData({
             ...fightData,
             Bowser: bowser,
