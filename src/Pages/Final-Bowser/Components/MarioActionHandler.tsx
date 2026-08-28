@@ -25,7 +25,7 @@ export default function MarioActionHandler() {
             <Chip.Group position="center" multiple={false} value={fightData.Mario.action}
                         onChange={(value) => setFightData({...fightData, Mario: {...fightData.Mario, action: value}})}>
                 <Chip value="attack" disabled={fightData.turn === 0 || fightData.Bowser.hp === 0}>Attack</Chip>
-                <Chip value="boost" disabled={fightData.turn === 0 || fightData.Bowser.hp === 0}>Boost</Chip>
+                <Chip value="boost" disabled={fightData.turn === 0 || fightData.Bowser.hp === 0}>Charge</Chip>
                 <Chip value="beam"
                       disabled={fightData.turn === 0 || fightData.Bowser.hp === 0}>{fightData.phase === 2 ? "Peach Beam" : "Star Beam"}</Chip>
                 <Chip value="skip" disabled={fightData.turn === 0 || fightData.Bowser.hp === 0}>Skip</Chip>

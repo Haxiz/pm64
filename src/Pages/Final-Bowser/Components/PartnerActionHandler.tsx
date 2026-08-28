@@ -28,7 +28,7 @@ export default function PartnerActionHandler() {
                             Partner: {...fightData.Partner, action: value}
                         })}>
                 <Chip value="attack" disabled={fightData.turn === 0 || fightData.Bowser.hp === 0}>Attack</Chip>
-                <Chip value="boost" disabled={fightData.turn === 0 || fightData.Bowser.hp === 0}>Boost</Chip>
+                <Chip value="boost" disabled={fightData.turn === 0 || fightData.Bowser.hp === 0}>Charge</Chip>
                 <Chip value="skip" disabled={fightData.turn === 0 || fightData.Bowser.hp === 0}>Skip</Chip>
             </Chip.Group>
             <Divider mt={10} mb={10} variant="dashed"
